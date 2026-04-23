@@ -23,10 +23,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Shellcheck scripts and hooks
+      - name: Shellcheck scripts
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
-          shellcheck scripts/*.sh hooks/pre-commit hooks/prepare-commit-msg
+          shellcheck scripts/*.sh
 
   structure:
     runs-on: ubuntu-latest
@@ -50,8 +50,6 @@ jobs:
             .github/workflows/sdl-validate.yml \
             scripts/install.sh \
             scripts/sync-to-repo.sh \
-            hooks/pre-commit \
-            hooks/prepare-commit-msg \
             lib/validate.py \
             docs/62443-mapping.md \
             docs/developer-guide.md \

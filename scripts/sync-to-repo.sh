@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
 # Per-repo SDL setup. Run once per project repo to opt it into SDL governance.
 #
-# Adds:
-#   .github/workflows/sdl.yml         (committed: calls reusable workflow)
-#   docs/sdl/.gitkeep                  (committed: signals SDL is active)
-#   .git/hooks/pre-commit             (NOT committed: shim to canonical hook)
-#   .git/hooks/prepare-commit-msg     (NOT committed: shim to canonical hook)
+# Adds (both committed):
+#   .github/workflows/sdl.yml         calls reusable workflow from savioke/sdl
+#   docs/sdl/.gitkeep                  signals SDL is active for this repo
 
 set -euo pipefail
 
@@ -45,27 +43,6 @@ mkdir -p "$repo/docs/sdl"
 keep="$repo/docs/sdl/.gitkeep"
 [[ -e "$keep" ]] || { touch "$keep"; log "Created $keep"; }
 
-# 3. Opt-in git hook shims (not committed).
-hooks_dir="$repo/.git/hooks"
-for h in pre-commit prepare-commit-msg; do
-  shim="$hooks_dir/$h"
-  if [[ -e "$shim" && ! -L "$shim" ]]; then
-    if grep -q "sdl-governance" "$shim" 2>/dev/null; then
-      log "Shim already present: $shim"
-      continue
-    fi
-    warn "$shim exists and is not an SDL shim. Skipping. Move it aside and re-run if desired."
-    continue
-  fi
-  cat > "$shim" <<EOF
-#!/usr/bin/env bash
-# sdl-governance shim — runs the canonical hook from the central install.
-exec "$INSTALL_DIR/hooks/$h" "\$@"
-EOF
-  chmod +x "$shim"
-  log "Installed shim: $shim"
-done
-
 cat <<EOF
 
 Done. Commit the new files:
@@ -73,8 +50,5 @@ Done. Commit the new files:
   cd $repo
   git add .github/workflows/sdl.yml docs/sdl/.gitkeep
   git commit -m "sdl: opt in to org SDL governance"
-
-Hook shims in .git/hooks/ are local-only (not committed). New clones of this
-repo do not get hooks until their developer also runs sync-to-repo.sh.
 
 EOF

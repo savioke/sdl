@@ -81,7 +81,7 @@ Have whoever owns the repo run, on their workstation:
 ~/.sdl-governance/scripts/sync-to-repo.sh /path/to/their/repo
 ```
 
-That drops `.github/workflows/sdl.yml`, creates `docs/sdl/.gitkeep`, and installs opt-in git hook shims. They commit the workflow file and `.gitkeep`.
+That drops `.github/workflows/sdl.yml` and creates `docs/sdl/.gitkeep`. Both get committed.
 
 Then, separately (admin step), expose the deploy secret to that repo:
 
@@ -167,4 +167,4 @@ No urgency either way. Default is private. If we ever decide to flip it, the con
 
 **Local skills aren't loading for a developer.** Confirm `~/.claude/skills/sdl` is a symlink pointing at `~/.sdl-governance/skills` (`ls -la ~/.claude/skills/sdl`). If something else is at that path, move it aside and re-run `install.sh`.
 
-**Hook shims aren't firing on a developer's machine.** They're per-clone, not committed. Each dev needs to run `sync-to-repo.sh` on their own clone of the project repo if they want hook coverage.
+**Validator passes locally but fails in CI (or vice versa).** Confirm both are running the same `SDL_REF` (tag) and the same merge base. Local default is `HEAD~1`-ish depending on branch state; CI uses `origin/main`.

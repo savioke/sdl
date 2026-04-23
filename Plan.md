@@ -31,12 +31,9 @@ sdl/
 ├── .github/workflows/
 │   ├── sdl-validate.yml               # reusable workflow (workflow_call)
 │   └── self-check.yml                 # CI on this repo itself
-├── hooks/
-│   ├── pre-commit                     # warn-only, opt-in per repo
-│   └── prepare-commit-msg             # appends SDL cycle ref
 ├── scripts/
 │   ├── install.sh                     # one-shot dev setup
-│   ├── sync-to-repo.sh                # adds minimal per-repo files, opt-in hooks
+│   ├── sync-to-repo.sh                # adds minimal per-repo files
 │   └── new-cycle.sh                   # called by skills to scaffold a folder
 ├── lib/
 │   └── validate.py                    # CI validation logic
@@ -64,7 +61,7 @@ project-repo/
 └── .github/workflows/sdl.yml          # 8 lines, calls reusable workflow
 ```
 
-No CLAUDE.md changes, no AGENTS.md, no copilot-instructions.md, no committed hooks, no scripts. The presence of `docs/sdl/` is the trigger signal skills look for.
+No CLAUDE.md changes, no AGENTS.md, no copilot-instructions.md, no hooks, no scripts. The presence of `docs/sdl/` is the trigger signal skills look for. CI is the SDL enforcement gate.
 
 `.github/workflows/sdl.yml`:
 
@@ -104,12 +101,9 @@ Triggered contextually by the agent based on `SKILL.md` description matching use
 
 No static rule library. Rationale: language-agnostic, scales as models improve, keeps skill prompts small. Auditors see the evidence of review in `04-verification.md`, which is what they actually want.
 
-## Hooks (opt-in per repo)
+## Local hooks
 
-Installed by `sync-to-repo.sh` as one-line shims in `.git/hooks/` that exec the canonical scripts in `~/.sdl-governance/hooks/`. Per-clone, not committed. Open-source side projects untouched.
-
-- `pre-commit`: if staged diff touches code but no `docs/sdl/*/` file in the same commit, print a one-line warning. No fail.
-- `prepare-commit-msg`: appends `SDL: <cycle-folder>` line if a current-branch cycle exists. Free `git log` traceability.
+None. Considered and rejected: pre-commit warnings and `git log` decoration shims add per-dev setup ceremony for benefits CI already provides. The "dev commits without ever talking to an agent" case is real but cheap — CI catches the missing artifacts at PR time, dev runs the agent, fixes, pushes again. If real usage shows the gap matters, hooks can be added back as opt-in shims via `sync-to-repo.sh`.
 
 ## CI validation
 
@@ -131,14 +125,14 @@ Repo is private. Everyone has `git:` access via SSH.
 2. `ln -sf ~/.sdl-governance/skills ~/.claude/skills/sdl`
 3. `ln -sf ~/.sdl-governance/skills ~/.copilot/skills/sdl`
 4. `claude /plugin marketplace add savioke/sdl` for nicer Claude update UX.
-5. No global hook config — hooks are opt-in per repo.
 
 Updates: `cd ~/.sdl-governance && git pull`. Symlinks mean every tool sees the new version immediately.
 
 `scripts/sync-to-repo.sh <repo>` (run once per project repo):
 1. Copies `.github/workflows/sdl.yml`.
 2. Creates `docs/sdl/.gitkeep`.
-3. Writes `.git/hooks/pre-commit` and `prepare-commit-msg` shims.
+
+Both files get committed. New devs cloning a repo that already opted in need no per-clone setup.
 
 ## 62443 mapping
 
@@ -152,7 +146,7 @@ Updates: `cd ~/.sdl-governance && git pull`. Symlinks mean every tool sees the n
 4. `sdl-spec` skill.
 5. `sdl-threat-model` skill.
 6. `scripts/install.sh`.
-7. `scripts/sync-to-repo.sh` and the opt-in hook shims.
+7. `scripts/sync-to-repo.sh`.
 8. `.github/workflows/sdl-validate.yml` + `lib/validate.py` (structural checks first, semantic later).
 9. `marketplace.json` and tag `v1` once exercised on a real feature.
 

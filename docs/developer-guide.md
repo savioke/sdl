@@ -32,7 +32,9 @@ Installs skills globally for Claude Code and Copilot. Updates: `cd ~/.sdl-govern
 ~/.sdl-governance/scripts/sync-to-repo.sh /path/to/your/repo
 ```
 
-Drops `.github/workflows/sdl.yml`, creates an empty `docs/sdl/`, installs opt-in pre-commit and prepare-commit-msg hooks in `.git/hooks/`. None of this is committed except the workflow file and `docs/sdl/.gitkeep`.
+Drops `.github/workflows/sdl.yml` and creates an empty `docs/sdl/`. Both are committed.
+
+Note that this is the only step that has to happen *in the repo*. Cloning a repo that already opted in needs nothing — no per-clone setup, no hook installation. Just clone and start working.
 
 ## Things to know
 
@@ -40,8 +42,9 @@ Drops `.github/workflows/sdl.yml`, creates an empty `docs/sdl/`, installs opt-in
 - **The agent is a first draft, not the final word.** Especially threat models. Read what it wrote and correct domain-specific gaps.
 - **Residual risks are valuable.** When the agent says "I couldn't verify X," that's the audit-relevant honesty. Don't pressure it to claim coverage it didn't establish.
 - **Carry-forward works.** If a previous cycle deferred something, `sdl-spec` surfaces it at the start of the next cycle so it doesn't get lost.
-- **Hooks are warn-only.** They will not block your commit. CI will fail if structure is missing on the PR.
+- **CI is the gate.** There are no local pre-commit hooks. The PR will fail if SDL artifacts are missing or stub. Catch it earlier by asking the agent to run `sdl-review` before pushing.
 - **Don't delete cycle folders, ever.** Even for ripped-out features. Auditors want history.
+- **If you commit without an agent**, no SDL artifacts get written. CI will catch it on the PR. Fix by asking the agent to run `sdl-spec` (if no cycle exists) and `sdl-review` (to populate the rest), then push.
 
 ## When skills don't fire automatically
 
