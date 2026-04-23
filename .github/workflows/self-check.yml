@@ -47,7 +47,7 @@ jobs:
             templates/docs-sdl/02-threat-model.md \
             templates/docs-sdl/03-implementation.md \
             templates/docs-sdl/04-verification.md \
-            workflows/sdl-validate.yml \
+            .github/workflows/sdl-validate.yml \
             scripts/install.sh \
             scripts/sync-to-repo.sh \
             hooks/pre-commit \

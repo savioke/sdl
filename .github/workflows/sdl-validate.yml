@@ -1,1 +1,42 @@
-../../workflows/sdl-validate.yml
+name: sdl-validate
+on:
+  workflow_call:
+    inputs:
+      base:
+        description: Merge base ref to compare against
+        required: false
+        type: string
+        default: origin/main
+      sdl_ref:
+        description: Ref of savioke/sdl to use for validator code
+        required: false
+        type: string
+        default: v1
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout sdl-governance
+        uses: actions/checkout@v4
+        with:
+          repository: savioke/sdl
+          ref: ${{ inputs.sdl_ref }}
+          path: .sdl-governance
+          ssh-key: ${{ secrets.SDL_DEPLOY_KEY }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Run validator
+        run: |
+          python .sdl-governance/lib/validate.py \
+            --base "${{ inputs.base }}" \
+            --repo .

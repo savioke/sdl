@@ -6,7 +6,7 @@ Central tools repo for our IEC 62443-4-1 aligned Secure Software Development Lif
 
 - **`skills/`** — Claude Code / Copilot skills: `sdl-spec`, `sdl-threat-model`, `sdl-review`. Author once, both tools consume.
 - **`templates/docs-sdl/`** — The four artifact stubs and `.sdl-meta.yml` copied into each new SDL cycle folder.
-- **`workflows/sdl-validate.yml`** — Reusable GitHub Actions workflow each project repo calls via `workflow_call`.
+- **`.github/workflows/sdl-validate.yml`** — Reusable GitHub Actions workflow each project repo calls via `workflow_call`.
 - **`hooks/`** — Optional pre-commit and prepare-commit-msg hooks. Opt-in per repo via `sync-to-repo.sh`.
 - **`scripts/install.sh`** — One-shot dev setup: clones this repo and symlinks skills into Claude Code and Copilot.
 - **`scripts/sync-to-repo.sh`** — Per-project init: drops the workflow file, creates `docs/sdl/`, installs hook shims.

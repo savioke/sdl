@@ -157,7 +157,7 @@ Reasons to stay private:
 - The set of security categories in `security-checks.md` is mildly informative about our posture. Not a real disclosure risk; an attacker learns more from `package.json` than from this list.
 - Internal-only audit prose in `docs/62443-mapping.md` may grow over time and might eventually warrant privacy.
 
-No urgency either way. Default is private. If we ever decide to flip it, the conversion is: remove the deploy key, remove the org secret, drop the `ssh-key:` line from `workflows/sdl-validate.yml`. That's it.
+No urgency either way. Default is private. If we ever decide to flip it, the conversion is: remove the deploy key, remove the org secret, drop the `ssh-key:` line from `.github/workflows/sdl-validate.yml`. That's it.
 
 ## Troubleshooting
 

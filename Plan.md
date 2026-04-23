@@ -28,8 +28,9 @@ sdl/
 │       └── security-checks.md         # category list, not a rule library
 ├── templates/
 │   └── docs-sdl/                      # four artifact stubs + .sdl-meta.yml
-├── workflows/
-│   └── sdl-validate.yml               # reusable workflow (workflow_call)
+├── .github/workflows/
+│   ├── sdl-validate.yml               # reusable workflow (workflow_call)
+│   └── self-check.yml                 # CI on this repo itself
 ├── hooks/
 │   ├── pre-commit                     # warn-only, opt-in per repo
 │   └── prepare-commit-msg             # appends SDL cycle ref
@@ -112,7 +113,7 @@ Installed by `sync-to-repo.sh` as one-line shims in `.git/hooks/` that exec the 
 
 ## CI validation
 
-`workflows/sdl-validate.yml` calls `lib/validate.py` against the diff:
+`.github/workflows/sdl-validate.yml` calls `lib/validate.py` against the diff:
 
 1. Substantive code changes → matching `.sdl-meta.yml` exists for current branch and was modified in this branch's history.
 2. All four artifact files present and not byte-equal to templates.
@@ -152,7 +153,7 @@ Updates: `cd ~/.sdl-governance && git pull`. Symlinks mean every tool sees the n
 5. `sdl-threat-model` skill.
 6. `scripts/install.sh`.
 7. `scripts/sync-to-repo.sh` and the opt-in hook shims.
-8. `workflows/sdl-validate.yml` + `lib/validate.py` (structural checks first, semantic later).
+8. `.github/workflows/sdl-validate.yml` + `lib/validate.py` (structural checks first, semantic later).
 9. `marketplace.json` and tag `v1` once exercised on a real feature.
 
 ## Honest caveats
