@@ -1,0 +1,15 @@
+# Never commit anything that looks like a key.
+sdl_deploy_key*
+*.pem
+*.key
+id_*
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Editor
+.vscode/
+.idea/
+*.swp

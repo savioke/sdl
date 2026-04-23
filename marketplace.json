@@ -1,0 +1,16 @@
+{
+  "$schema": "https://claude.ai/schemas/plugin-marketplace.json",
+  "name": "sdl",
+  "displayName": "SDL Governance",
+  "description": "IEC 62443-4-1 aligned SDL skills: spec, threat model, and review.",
+  "owner": "savioke",
+  "plugins": [
+    {
+      "name": "sdl",
+      "displayName": "SDL Governance",
+      "description": "Skills that scaffold SDL evidence per branch/PR and review diffs for security implications. See https://github.com/savioke/sdl.",
+      "version": "0.1.0",
+      "path": "plugins/sdl"
+    }
+  ]
+}

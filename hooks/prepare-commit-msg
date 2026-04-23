@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# SDL prepare-commit-msg hook.
+# Appends "SDL: <cycle-folder>" to the commit message if the current branch has
+# a matching cycle in docs/sdl/. Free git log traceability.
+
+set -eu
+
+msg_file="$1"
+source="${2:-}"
+
+# Skip merges, squashes, amends, and messages already containing SDL: line.
+case "$source" in
+  merge|squash) exit 0 ;;
+esac
+grep -q '^SDL: ' "$msg_file" 2>/dev/null && exit 0
+
+repo_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+[[ -z "$repo_root" ]] && exit 0
+[[ -d "$repo_root/docs/sdl" ]] || exit 0
+
+branch="$(git symbolic-ref --short HEAD 2>/dev/null || true)"
+[[ -z "$branch" ]] && exit 0
+
+cycle=""
+for meta in "$repo_root"/docs/sdl/*/.sdl-meta.yml; do
+  [[ -e "$meta" ]] || continue
+  if grep -Eq "^branch:[[:space:]]+${branch}[[:space:]]*$" "$meta" 2>/dev/null; then
+    cycle="$(basename "$(dirname "$meta")")"
+    break
+  fi
+done
+
+[[ -z "$cycle" ]] && exit 0
+
+printf '\nSDL: %s\n' "$cycle" >> "$msg_file"
+exit 0

@@ -1,0 +1,66 @@
+name: self-check
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  validator:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Validator imports and runs
+        run: |
+          python -c "import ast; ast.parse(open('lib/validate.py').read())"
+          python lib/validate.py --help
+
+  shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shellcheck scripts and hooks
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          shellcheck scripts/*.sh hooks/pre-commit hooks/prepare-commit-msg
+
+  structure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Required files exist
+        run: |
+          set -e
+          for f in \
+            marketplace.json \
+            plugins/sdl/.claude-plugin/plugin.json \
+            skills/sdl-spec/SKILL.md \
+            skills/sdl-threat-model/SKILL.md \
+            skills/sdl-review/SKILL.md \
+            skills/sdl-review/security-checks.md \
+            templates/docs-sdl/.sdl-meta.yml \
+            templates/docs-sdl/01-requirements.md \
+            templates/docs-sdl/02-threat-model.md \
+            templates/docs-sdl/03-implementation.md \
+            templates/docs-sdl/04-verification.md \
+            workflows/sdl-validate.yml \
+            scripts/install.sh \
+            scripts/sync-to-repo.sh \
+            hooks/pre-commit \
+            hooks/prepare-commit-msg \
+            lib/validate.py \
+            docs/62443-mapping.md \
+            docs/developer-guide.md \
+            docs/admin-setup.md
+          do
+            test -f "$f" || { echo "missing: $f"; exit 1; }
+          done
+          echo "all required files present"
+      - name: JSON parses
+        run: |
+          python -c "import json; json.load(open('marketplace.json'))"
+          python -c "import json; json.load(open('plugins/sdl/.claude-plugin/plugin.json'))"

@@ -1,0 +1,62 @@
+# SDL — Developer Guide
+
+What you need to know to work on a project that uses our SDL governance.
+
+## What it is
+
+A lightweight evidence trail for IEC 62443-4-1. Each branch/PR generates a folder under `docs/sdl/` with four short markdown files. The agent (Claude Code or Copilot) writes them. You review and edit.
+
+## What you do
+
+1. **Start a feature branch** as usual.
+2. **Talk to the agent** about what you're building. It will invoke `sdl-spec` to scaffold `docs/sdl/YYYY-MM-DD-<branch-slug>/` and ask a few short questions (assets touched, trust boundaries, data classification, external inputs). Answer them in conversation. The agent fills the file.
+3. **Build the feature.** As architecture firms up, the agent invokes `sdl-threat-model` to populate `02-threat-model.md`. Skim and correct.
+4. **Before pushing the PR**, ask the agent to review (or it will offer). It runs `sdl-review` against the diff, populates `03-implementation.md` and `04-verification.md`, and flags anything it couldn't verify as residual risk.
+5. **Read what it wrote.** Edit anything wrong. Sign off the checkboxes in `04-verification.md`.
+6. **Commit and push.** CI validates the structure.
+
+That's it. No forms, no Jira tickets, no separate security reviews unless something material is flagged.
+
+## One-time setup
+
+```
+gh repo clone savioke/sdl
+./sdl/scripts/install.sh
+```
+
+Installs skills globally for Claude Code and Copilot. Updates: `cd ~/.sdl-governance && git pull`.
+
+## Per-repo setup (run once when a repo first adopts SDL)
+
+```
+~/.sdl-governance/scripts/sync-to-repo.sh /path/to/your/repo
+```
+
+Drops `.github/workflows/sdl.yml`, creates an empty `docs/sdl/`, installs opt-in pre-commit and prepare-commit-msg hooks in `.git/hooks/`. None of this is committed except the workflow file and `docs/sdl/.gitkeep`.
+
+## Things to know
+
+- **One cycle per branch.** New branch = new folder. Don't reuse old ones, even for "phase 2" work — cross-reference instead. `sdl-spec` will prompt you.
+- **The agent is a first draft, not the final word.** Especially threat models. Read what it wrote and correct domain-specific gaps.
+- **Residual risks are valuable.** When the agent says "I couldn't verify X," that's the audit-relevant honesty. Don't pressure it to claim coverage it didn't establish.
+- **Carry-forward works.** If a previous cycle deferred something, `sdl-spec` surfaces it at the start of the next cycle so it doesn't get lost.
+- **Hooks are warn-only.** They will not block your commit. CI will fail if structure is missing on the PR.
+- **Don't delete cycle folders, ever.** Even for ripped-out features. Auditors want history.
+
+## When skills don't fire automatically
+
+Skills trigger on intent. If yours misses, just ask:
+
+- "Run sdl-spec for this feature"
+- "Threat model this"
+- "Review the diff for SDL"
+
+## When you disagree with the agent
+
+Edit the file. The artifact is the source of truth, not the conversation. Commit the edits with the rest of your work.
+
+## Pointers
+
+- Plan and architecture: `Plan.md`
+- Practice mapping: `docs/62443-mapping.md`
+- Skills: `skills/`

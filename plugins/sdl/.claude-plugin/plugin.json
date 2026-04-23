@@ -1,0 +1,12 @@
+{
+  "$schema": "https://claude.ai/schemas/plugin.json",
+  "name": "sdl",
+  "displayName": "SDL Governance",
+  "description": "Scaffold and review SDL artifacts (IEC 62443-4-1 aligned) per feature branch.",
+  "version": "0.1.0",
+  "skills": [
+    "skills/sdl-spec",
+    "skills/sdl-threat-model",
+    "skills/sdl-review"
+  ]
+}

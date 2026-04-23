@@ -1,0 +1,14 @@
+# SDL cycle metadata. Maintained by sdl-* skills; humans rarely edit.
+# Practice refs: SM-1 (development process), SM-5 (change management).
+
+slug:                       # YYYY-MM-DD-<branch-slug>, matches folder name
+branch:                     # original branch name, pre-normalization
+created:                    # YYYY-MM-DD, set on cycle creation
+pr:                         # GitHub PR number, filled when PR opens
+status: in-progress         # in-progress | review | merged | abandoned
+
+related_cycles: []          # prior cycle slugs this builds on or supersedes
+
+# Carried-forward residual risks from prior cycles that this cycle should address.
+# Populated by sdl-spec at cycle start; cleared as items are addressed in 03/04.
+carry_forward: []
