@@ -36,7 +36,7 @@ jobs:
         run: |
           set -e
           for f in \
-            marketplace.json \
+            .claude-plugin/marketplace.json \
             plugins/sdl/.claude-plugin/plugin.json \
             skills/sdl-spec/SKILL.md \
             skills/sdl-threat-model/SKILL.md \
@@ -60,5 +60,5 @@ jobs:
           echo "all required files present"
       - name: JSON parses
         run: |
-          python -c "import json; json.load(open('marketplace.json'))"
+          python -c "import json; json.load(open('.claude-plugin/marketplace.json'))"
           python -c "import json; json.load(open('plugins/sdl/.claude-plugin/plugin.json'))"

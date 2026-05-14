@@ -1,9 +1,11 @@
 {
-  "$schema": "https://claude.ai/schemas/plugin-marketplace.json",
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "sdl",
   "displayName": "SDL Governance",
   "description": "IEC 62443-4-1 aligned SDL skills: spec, threat model, and review.",
-  "owner": "savioke",
+  "owner": {
+    "name": "savioke"
+  },
   "plugins": [
     {
       "name": "sdl",
