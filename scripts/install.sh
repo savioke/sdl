@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # One-shot dev setup for SDL governance.
-# Clones (or updates) the canonical repo and symlinks skills into the locations
-# Claude Code and Copilot read. No global git hook config — hooks are opt-in
-# per repo via sync-to-repo.sh.
+# Clones (or updates) the canonical repo, registers the Claude Code marketplace
+# and installs the sdl plugin, and symlinks skills into Copilot's skills dir.
+# No global git hook config — hooks are opt-in per repo via sync-to-repo.sh.
 
 set -euo pipefail
 
@@ -26,20 +26,15 @@ else
   git clone "$REPO_URL" "$INSTALL_DIR"
 fi
 
-# 2. Symlink skills into Claude Code's skills dir.
-mkdir -p "$CLAUDE_SKILLS_DIR"
-target="$CLAUDE_SKILLS_DIR/$LINK_NAME"
-if [[ -L "$target" ]]; then
-  log "Refreshing Claude symlink: $target"
-  ln -sfn "$INSTALL_DIR/skills" "$target"
-elif [[ -e "$target" ]]; then
-  warn "$target exists and is not a symlink. Skipping. Move it aside and re-run."
-else
-  log "Linking Claude skills: $target -> $INSTALL_DIR/skills"
-  ln -s "$INSTALL_DIR/skills" "$target"
+# 2. Remove legacy Claude skills symlink if a prior install created one.
+#    Skills are now delivered through the Claude Code plugin marketplace below.
+legacy="$CLAUDE_SKILLS_DIR/$LINK_NAME"
+if [[ -L "$legacy" && "$(readlink "$legacy")" == "$INSTALL_DIR/skills" ]]; then
+  log "Removing legacy Claude skills symlink: $legacy"
+  rm "$legacy"
 fi
 
-# 3. Symlink skills into Copilot's skills dir.
+# 3. Symlink skills into Copilot's skills dir. Copilot has no marketplace path.
 mkdir -p "$COPILOT_SKILLS_DIR"
 target="$COPILOT_SKILLS_DIR/$LINK_NAME"
 if [[ -L "$target" ]]; then
@@ -52,13 +47,16 @@ else
   ln -s "$INSTALL_DIR/skills" "$target"
 fi
 
-# 4. Register the Claude Code marketplace for nicer update UX (best-effort).
+# 4. Register the Claude Code marketplace and install the plugin.
 if command -v claude >/dev/null 2>&1; then
-  log "Registering Claude Code marketplace (best-effort)"
+  log "Registering Claude Code marketplace"
   claude plugin marketplace add "$INSTALL_DIR" || \
-    warn "Marketplace registration failed; skills still work via the direct symlink."
+    warn "Marketplace registration failed (may already be registered)."
+  log "Installing sdl plugin"
+  claude plugin install sdl@sdl || \
+    warn "Plugin install failed; run 'claude plugin install sdl@sdl' manually."
 else
-  warn "claude CLI not found. Skipping marketplace registration. Skills still work."
+  warn "claude CLI not found. Skipping plugin install. Install Claude Code and re-run."
 fi
 
 cat <<EOF
@@ -66,7 +64,7 @@ cat <<EOF
 Done.
 
   Install dir:      $INSTALL_DIR
-  Claude skills:    $CLAUDE_SKILLS_DIR/$LINK_NAME
+  Claude plugin:    sdl@sdl (managed via 'claude plugin')
   Copilot skills:   $COPILOT_SKILLS_DIR/$LINK_NAME
 
 To update later:
