@@ -53,8 +53,8 @@ if command -v claude >/dev/null 2>&1; then
   claude plugin marketplace add "$INSTALL_DIR" || \
     warn "Marketplace registration failed (may already be registered)."
   log "Installing sdl plugin"
-  claude plugin install sdl@sdl || \
-    warn "Plugin install failed; run 'claude plugin install sdl@sdl' manually."
+  claude plugin install sdl@savioke || \
+    warn "Plugin install failed; run 'claude plugin install sdl@savioke' manually."
 else
   warn "claude CLI not found. Skipping plugin install. Install Claude Code and re-run."
 fi
@@ -64,7 +64,7 @@ cat <<EOF
 Done.
 
   Install dir:      $INSTALL_DIR
-  Claude plugin:    sdl@sdl (managed via 'claude plugin')
+  Claude plugin:    sdl@savioke (managed via 'claude plugin')
   Copilot skills:   $COPILOT_SKILLS_DIR/$LINK_NAME
 
 To update later:
