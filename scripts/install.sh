@@ -55,7 +55,7 @@ fi
 # 4. Register the Claude Code marketplace for nicer update UX (best-effort).
 if command -v claude >/dev/null 2>&1; then
   log "Registering Claude Code marketplace (best-effort)"
-  claude /plugin marketplace add "$INSTALL_DIR" || \
+  claude plugin marketplace add "$INSTALL_DIR" || \
     warn "Marketplace registration failed; skills still work via the direct symlink."
 else
   warn "claude CLI not found. Skipping marketplace registration. Skills still work."
