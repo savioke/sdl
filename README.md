@@ -10,7 +10,7 @@ Central tools repo for our IEC 62443-4-1 aligned Secure Software Development Lif
 - **`scripts/install.sh`** — One-shot dev setup: clones this repo and symlinks skills into Claude Code and Copilot.
 - **`scripts/sync-to-repo.sh`** — Per-project init: drops the workflow file and creates `docs/sdl/`.
 - **`docs/`** — `62443-mapping.md` (audit-facing), `developer-guide.md` (dev intro), `admin-setup.md` (deploy keys, key rotation, repo onboarding).
-- **`marketplace.json` + `plugins/sdl/`** — Claude Code plugin marketplace path. Same skills, served via the marketplace UX.
+- **`.claude-plugin/marketplace.json` + `plugins/sdl/`** — Claude Code plugin marketplace path. Same skills, served via the marketplace UX.
 
 ## Install (per developer, once)
 
