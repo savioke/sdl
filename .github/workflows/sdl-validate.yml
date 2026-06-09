@@ -28,7 +28,6 @@ jobs:
           repository: savioke/sdl
           ref: ${{ inputs.sdl_ref }}
           path: .sdl-governance
-          ssh-key: ${{ secrets.SDL_DEPLOY_KEY }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
