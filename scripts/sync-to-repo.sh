@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Per-repo SDL setup. Run once per project repo to opt it into SDL governance.
 #
-# Adds (both committed):
+# Adds (all committed):
 #   .github/workflows/sdl.yml         calls reusable workflow from savioke/sdl
 #   docs/sdl/.gitkeep                  signals SDL is active for this repo
+#   docs/sdl/baseline.md              repo security baseline stub; fill via sdl-baseline
 
 set -euo pipefail
 
@@ -43,12 +44,25 @@ mkdir -p "$repo/docs/sdl"
 keep="$repo/docs/sdl/.gitkeep"
 [[ -e "$keep" ]] || { touch "$keep"; log "Created $keep"; }
 
+# 3. Baseline stub.
+baseline="$repo/docs/sdl/baseline.md"
+if [[ -e "$baseline" ]]; then
+  warn "$baseline already exists. Leaving as-is."
+else
+  cp "$INSTALL_DIR/templates/baseline.md" "$baseline"
+  log "Wrote $baseline (stub — fill it with the sdl-baseline skill)"
+fi
+
 cat <<EOF
 
 Done. Commit the new files:
 
   cd $repo
-  git add .github/workflows/sdl.yml docs/sdl/.gitkeep
+  git add .github/workflows/sdl.yml docs/sdl/.gitkeep docs/sdl/baseline.md
   git commit -m "sdl: opt in to org SDL governance"
+
+Then, once, ask your agent to run the sdl-baseline skill ("initialize the SDL
+baseline") to record this repo's standing security posture. Per-feature cycles
+reference the baseline and stay small.
 
 EOF

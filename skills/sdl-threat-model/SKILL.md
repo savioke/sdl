@@ -7,6 +7,21 @@ description: Produce a STRIDE-lite threat model for the current SDL cycle. Use w
 
 You produce the threat model for an in-flight SDL cycle. Output is `02-threat-model.md`. Goal: identify what could go wrong with what's actually being built, propose mitigations, link to prior-cycle threats so we don't relitigate.
 
+## Proportionality
+
+The threat model must be proportional to the change. Most diffs introduce **zero to two** genuinely new threats. A 30-line change with one new trust boundary has one threat, not four.
+
+A concern earns a full threat stanza only if it is **presently reachable in the code as written by this diff**. Everything else is a one-line note, not a stanza:
+
+- **Not reachable today** ("if the YAML ever grows", "a malformed document would…", but the current inputs make it impossible) → one line under "Noted for future cycles".
+- **Not this code** (an IAM-scope concern, a permission someone already holds, a platform default) → one line under "Out-of-scope threats" with the owner.
+- **Already covered by the baseline or a prior cycle** → reference it by ID; do not restate it.
+- **Forward-looking habit risk** ("a future maintainer might put secrets here") → one line under "Noted for future cycles".
+
+Do not give these the Description / Likelihood / Impact / Mitigation / Mitigation-type / Defense-in-depth treatment. That structure is for live threats only. Padding the model with speculative stanzas buries the one threat that matters and makes small changes read as if they were large ones.
+
+Read `docs/sdl/baseline.md` first (if present) for the repo's standing exposure model and standing risks. Reference them; don't re-derive them each cycle.
+
 ## Preconditions
 
 1. The repo has a `docs/sdl/` folder. If not, this skill does not apply — exit silently.
@@ -15,6 +30,7 @@ You produce the threat model for an in-flight SDL cycle. Output is `02-threat-mo
 ## Inputs
 
 - The cycle folder for the current branch (find via `docs/sdl/*/.sdl-meta.yml` matching the branch).
+- `docs/sdl/baseline.md` if present — the repo's standing exposure model, trust boundaries, and standing risk register (B1, B2, …). Inherit from it; don't re-derive.
 - `01-requirements.md` — the source of truth for what's in scope, what assets are touched, trust boundaries, external inputs.
 - `02-threat-model.md` from each cycle listed in `.sdl-meta.yml` `related_cycles` — for inheritance.
 - Whatever the user has shared about architecture in the conversation.
@@ -67,9 +83,14 @@ Read `02-threat-model.md` from each cycle in `related_cycles`. For each prior th
 
 If a prior threat is now obsolete (the code path it covered is gone), say so explicitly with one line.
 
-### 5. Out-of-scope threats
+### 5. One-line notes: out of scope and noted for future cycles
 
-Anything you considered and decided not to address in this cycle goes here with a one-line rationale: deferred, accepted, out of product scope, etc. This is the auditor-visible reason a known concern wasn't mitigated.
+Everything you considered but did not write as a live threat goes here as a **single line each** — no stanza.
+
+- **Out-of-scope threats:** concerns owned elsewhere (IAM scope, a platform default, an upstream layer covered by the baseline or a prior cycle) or explicitly deferred/accepted. One line with the rationale and the owner. This is the auditor-visible reason a known concern wasn't mitigated here.
+- **Noted for future cycles:** concerns that are not reachable with the code as written but would become real if the code grew a certain way (e.g. "if user-data ever carries a non-allowlisted string, switch to a YAML marshaller"). One line each. These are signposts for the next maintainer, not threats.
+
+If a note here starts wanting a Mitigation and a Likelihood/Impact, it's either a real threat (promote it to a stanza in step 3) or you're over-documenting it (keep it to one line).
 
 ### 6. Report
 
