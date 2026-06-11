@@ -18,6 +18,8 @@ jobs:
         run: |
           python -c "import ast; ast.parse(open('lib/validate.py').read())"
           python lib/validate.py --help
+      - name: Unit tests
+        run: python -m unittest -v lib.test_validate
 
   shell:
     runs-on: ubuntu-latest

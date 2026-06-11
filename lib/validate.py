@@ -39,13 +39,14 @@ CODE_EXTS_NON_DOC = {
 WORKFLOW_DIR_PREFIXES = (".github/workflows/", ".github/actions/")
 WORKFLOW_NAMES = {"action.yml", "action.yaml"}
 
-# Skill definitions instruct an agent — an executable spec with no compiler in
-# the way, so a hostile edit hijacks behavior. Scoped to skill files only, not
-# all markdown (which would sweep in the SDL artifacts themselves).
+
 def is_workflow(p: Path) -> bool:
     return p.as_posix().startswith(WORKFLOW_DIR_PREFIXES) or p.name in WORKFLOW_NAMES
 
 
+# Skill definitions instruct an agent — an executable spec with no compiler in
+# the way, so a hostile edit hijacks behavior. Scoped to skill files only, not
+# all markdown (which would sweep in the SDL artifacts themselves).
 def is_skill(p: Path) -> bool:
     return p.name == "SKILL.md" or ("skills" in p.parts and p.suffix == ".md")
 
