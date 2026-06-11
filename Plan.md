@@ -129,7 +129,7 @@ Repo is private. Everyone has `git:` access via SSH.
 3. `ln -sf ~/.sdl-governance/skills ~/.copilot/skills/sdl`
 4. `claude /plugin marketplace add savioke/sdl` for nicer Claude update UX.
 
-Updates: `cd ~/.sdl-governance && git pull`. Symlinks mean every tool sees the new version immediately.
+Updates: `cd ~/.sdl-governance && git pull`. Copilot sees the new version immediately (symlinked skills); Claude Code does not — its plugin marketplace is a local clone that does not auto-refresh, so it also needs `/plugin marketplace update savioke` and a reload.
 
 `scripts/sync-to-repo.sh <repo>` (run once per project repo):
 1. Copies `.github/workflows/sdl.yml`.
