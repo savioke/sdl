@@ -112,7 +112,7 @@ None. Considered and rejected: pre-commit warnings and `git log` decoration shim
 
 `.github/workflows/sdl-validate.yml` calls `lib/validate.py` against the diff:
 
-1. Substantive code changes → matching `.sdl-meta.yml` exists for current branch and was modified in this branch's history.
+1. Substantive code changes → matching `.sdl-meta.yml` exists for current branch and was modified in this branch's history. "Code" means a source extension (`CODE_EXTS_NON_DOC`), a GitHub-executable file (`.github/workflows/`, `.github/actions/`, `action.yml`), or a skill definition (`SKILL.md` or `.md` under `skills/`). Plain markdown, SDL artifacts, and benign config YAML do not gate.
 2. All four artifact files present and not byte-equal to templates.
 3. New external inputs / endpoints / SQL / deserialization in diff have corresponding threat IDs in `02-threat-model.md`.
 4. `INDEX.md` freshness: warn-only, never fail.

@@ -33,6 +33,23 @@ CODE_EXTS_NON_DOC = {
     ".sql",
 }
 
+# GitHub-executable surface. Workflow and action YAML runs in CI with repo
+# secrets in scope; a hostile edit is a supply-chain vector regardless of
+# extension. Treated as code even though .yml is not in CODE_EXTS_NON_DOC.
+WORKFLOW_DIR_PREFIXES = (".github/workflows/", ".github/actions/")
+WORKFLOW_NAMES = {"action.yml", "action.yaml"}
+
+
+def is_workflow(p: Path) -> bool:
+    return p.as_posix().startswith(WORKFLOW_DIR_PREFIXES) or p.name in WORKFLOW_NAMES
+
+
+# Skill definitions instruct an agent — an executable spec with no compiler in
+# the way, so a hostile edit hijacks behavior. Scoped to skill files only, not
+# all markdown (which would sweep in the SDL artifacts themselves).
+def is_skill(p: Path) -> bool:
+    return p.name == "SKILL.md" or ("skills" in p.parts and p.suffix == ".md")
+
 
 @dataclass
 class Result:
@@ -60,7 +77,10 @@ def changed_files(base: str) -> list[Path]:
 
 
 def code_changed(files: list[Path]) -> bool:
-    return any(f.suffix in CODE_EXTS_NON_DOC for f in files)
+    return any(
+        f.suffix in CODE_EXTS_NON_DOC or is_workflow(f) or is_skill(f)
+        for f in files
+    )
 
 
 def find_cycle_for_branch(repo: Path, branch: str) -> Path | None:
