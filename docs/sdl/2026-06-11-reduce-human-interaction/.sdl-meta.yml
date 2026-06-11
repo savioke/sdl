@@ -1,0 +1,12 @@
+# SDL cycle metadata. Maintained by sdl-* skills; humans rarely edit.
+# Practice refs: SM-1 (development process), SM-5 (change management).
+
+slug: 2026-06-11-reduce-human-interaction
+branch: reduce-human-interaction
+created: 2026-06-11
+pr: 8
+status: review
+
+related_cycles: [2026-06-10-adopt-sdl-governance]
+
+carry_forward: []

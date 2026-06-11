@@ -7,7 +7,7 @@ Central tools repo for IEC 62443-4-1 aligned Secure Software Development Lifecyc
 - Minimize developer engagement; automate via agents wherever possible.
 - Single source of truth: skills and workflows live here, pulled (not copied) into project repos.
 - Project repos stay about the project. Process plumbing is invisible at the repo level.
-- Quick human review and sign-off at PR time is the only required human step.
+- Quick human review at PR time is the only required human step.
 
 ## This repo's structure
 

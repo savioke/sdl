@@ -89,7 +89,11 @@ Tell the user:
 - The cycle folder you created.
 - Which related cycles you found (or "none").
 - Which carry-forward items, if any, this cycle is taking on.
-- That `02-threat-model.md` should be filled by `sdl-threat-model` once architecture firms up, and `03`/`04` by `sdl-review` before the PR.
+- That you'll fill `02-threat-model.md` (via `sdl-threat-model`) once the architecture is concrete, and `03`/`04` (via `sdl-review`) before the PR — as a normal part of the work, not something the user has to request.
+
+## Proceeding through the cycle
+
+These artifacts are part of normal development, not a task the user must authorize. Don't close with "let me know when you'd like me to threat-model" — when the architecture is concrete enough, run `sdl-threat-model` on your own initiative, and `sdl-review` when the change is heading for commit or PR. Announce what you're about to do and show what you wrote so the user can correct it; transparency, not permission-seeking, is the goal. Stop to ask only for a genuine open question you can't resolve from the code or conversation — an architectural decision, an undocumented trust boundary, a domain risk only the human knows.
 
 ## Tone
 

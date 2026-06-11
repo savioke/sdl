@@ -36,10 +36,3 @@
 | ID  | Description | Severity | Disposition | Carry-forward target |
 |-----|-------------|----------|-------------|----------------------|
 | R1  |             |          | accept | defer | mitigate-later |  |
-
-## Sign-off
-
-- [ ] Threat model mitigations verified or residual risk recorded
-- [ ] Secure coding checks for applicable categories complete
-- [ ] Static analysis and dependency scan reviewed
-- [ ] Residual risks documented and dispositioned

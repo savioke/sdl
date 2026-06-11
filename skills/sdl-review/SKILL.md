@@ -76,7 +76,6 @@ If a threat from the model has no corresponding code change, that is a finding �
 - Reference any static analysis or SBOM output already present in CI.
 - Populate the Residual risks table with anything you couldn't verify or that should be deferred. Each row needs an ID (R1, R2, …), description, severity, disposition, and a carry-forward target if applicable.
 - If a residual risk is a **standing condition** (pre-existing, not introduced by this diff — e.g. an unauthenticated endpoint that predates it), reference the baseline register by ID (`inherits baseline:B2`) if present, or suggest adding it to `docs/sdl/baseline.md` via `sdl-baseline`. Keep this cycle's R-items to risks this diff introduces or leaves open.
-- Leave the sign-off checkboxes unchecked. The human signs off, not you.
 
 **`.sdl-meta.yml`:**
 - If a PR exists for this branch (check `gh pr view --json number` or similar), set `pr:` to the number.
@@ -102,6 +101,10 @@ Tell the user:
 - Files modified by this skill.
 
 Be specific. Do not say "I reviewed everything and it looks good" unless every applicable category was verified positive with explicit references.
+
+## Proceeding through the cycle
+
+Run this as a normal part of getting a change ready — when the user signals they're about to commit or open a PR, review without waiting to be asked. Announce that you're reviewing and report what you found; transparency, not permission-seeking, is the goal. Stop to ask only for a genuine open question you can't resolve from the diff.
 
 ## Tone
 
