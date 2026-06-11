@@ -13,7 +13,7 @@ A lightweight evidence trail for IEC 62443-4-1. Each branch/PR generates a folde
 2. **Talk to the agent** about what you're building. It will invoke `sdl-spec` to scaffold `docs/sdl/YYYY-MM-DD-<branch-slug>/` and ask a few short questions (assets touched, trust boundaries, data classification, external inputs). Answer them in conversation. The agent fills the file.
 3. **Build the feature.** As architecture firms up, the agent invokes `sdl-threat-model` to populate `02-threat-model.md`. Skim and correct.
 4. **Before pushing the PR**, ask the agent to review (or it will offer). It runs `sdl-review` against the diff, populates `03-implementation.md` and `04-verification.md`, and flags anything it couldn't verify as residual risk.
-5. **Read what it wrote.** Edit anything wrong. Sign off the checkboxes in `04-verification.md`.
+5. **Read what it wrote.** Edit anything wrong.
 6. **Commit and push.** CI validates the structure.
 
 That's it. No forms, no Jira tickets, no separate security reviews unless something material is flagged.

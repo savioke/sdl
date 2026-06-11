@@ -97,7 +97,11 @@ Tell the user:
 - How many new threats you wrote (and the IDs).
 - How many prior-cycle threats are inherited.
 - Anything you flagged out of scope and why.
-- That `sdl-review` will verify the mitigations actually landed in code before the PR.
+- That you'll run `sdl-review` to verify the mitigations actually landed in code before the PR.
+
+## Proceeding through the cycle
+
+Writing the threat model is part of normal development, not a step the user must authorize. When the design is concrete enough to model, do it — don't ask "let me know when you'd like me to threat-model." When the change later heads for commit or PR, run `sdl-review` on your own initiative. Announce what you're doing and show what you wrote so the user can correct it; transparency, not permission-seeking, is the goal. Stop to ask only for a genuine open question — an architectural decision or a domain risk you can't resolve from the code or conversation.
 
 ## Tone
 

@@ -28,7 +28,7 @@ Each row links a specific 62443-4-1 requirement to where evidence lives.
 | Req   | Title                              | Evidence |
 |-------|------------------------------------|----------|
 | SM-1  | Development process                | This repo (`Plan.md`, skill prompts, templates) |
-| SM-2  | Identification of responsibilities | Project repo `CODEOWNERS` + PR sign-off in `04-verification.md` |
+| SM-2  | Identification of responsibilities | Project repo `CODEOWNERS` + PR approval (git merge history) |
 | SM-3  | Identification of applicability    | Presence of `docs/sdl/` in project repo |
 | SM-5  | Process scoping                    | `.sdl-meta.yml` `scope` and `status` fields |
 | SM-9  | Controls on private keys / secrets — applied here as dependency controls | `03-implementation.md` "Dependencies" section, SBOM/CVE scan output |
@@ -42,7 +42,7 @@ Each row links a specific 62443-4-1 requirement to where evidence lives.
 | SR-2  | Threat model                       | `02-threat-model.md` (whole file) |
 | SR-3  | Product security requirements      | `01-requirements.md` "Security requirements" |
 | SR-4  | Product security requirements content | `01-requirements.md` "Security requirements" (authn, authz, encryption, logging, validation) |
-| SR-5  | Security requirements review       | `04-verification.md` sign-off checklist |
+| SR-5  | Security requirements review       | `04-verification.md` "Checks performed" + PR review |
 
 ### SD — Secure by Design
 
@@ -50,7 +50,7 @@ Each row links a specific 62443-4-1 requirement to where evidence lives.
 |-------|------------------------------------|----------|
 | SD-1  | Secure design principles           | `02-threat-model.md` "Threats" → "Mitigation" rows |
 | SD-2  | Defense in depth design            | `02-threat-model.md` "Defense in depth notes" |
-| SD-3  | Security design review             | `04-verification.md` sign-off checklist |
+| SD-3  | Security design review             | `02-threat-model.md` review + PR approval |
 | SD-4  | Secure design best practices       | `03-implementation.md` "Secure coding practices applied" |
 
 ### SI — Secure Implementation
@@ -75,7 +75,7 @@ Each row links a specific 62443-4-1 requirement to where evidence lives.
 | Req   | Title                              | Evidence |
 |-------|------------------------------------|----------|
 | DM-1  | Receiving notifications of security-related issues | `04-verification.md` "Residual risks" + carry-forward in `.sdl-meta.yml` |
-| DM-2  | Reviewing security-related issues  | `04-verification.md` sign-off |
+| DM-2  | Reviewing security-related issues  | `04-verification.md` "Residual risks" + PR review |
 | DM-3  | Assessing security-related issues  | "Severity" / "Disposition" columns in residual risks table |
 | DM-4  | Addressing security-related issues | Carry-forward mechanism resolved in subsequent cycles |
 
@@ -85,6 +85,6 @@ A unified report across all project repos can be generated on demand by walking 
 
 - All `.sdl-meta.yml` files (cycle index, branch, PR, status, dates)
 - All inline `<!-- SR-N -->` style tags and the surrounding section content
-- Sign-off state from each `04-verification.md`
+- PR approval / merge state from git history
 
 The generator script is intentionally not in this repo yet — the data model is stable, the report shape will firm up after we have real cycles to audit.

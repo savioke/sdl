@@ -11,7 +11,7 @@
       "name": "sdl",
       "displayName": "SDL Governance",
       "description": "Skills that scaffold SDL evidence per branch/PR and review diffs for security implications. See https://github.com/savioke/sdl.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "source": "./plugins/sdl"
     }
   ]
