@@ -45,7 +45,7 @@ No confidentiality assets: the repo is public and holds no secrets or customer d
 - This repo runs its own SDL gate (`.github/workflows/sdl.yml`, self-referential at `@v1`).
 - The validator stays standard-library only — no third-party dependencies, so no dependency supply-chain of its own.
 - CI must pass: validator unit tests, `shellcheck` on scripts, structure checks.
-- Workflows should pin third-party actions; today they pin by major tag (see B6).
+- Workflows must pin third-party actions by commit SHA; `actions/*` are pinned and kept current by Dependabot (see B6).
 
 ## Standing risk register
 
@@ -56,7 +56,7 @@ No confidentiality assets: the repo is public and holds no secrets or customer d
 | B3 | Workstation scripts run with developer privileges: `install.sh` / `sync-to-repo.sh` write into `~/.claude`, `~/.copilot`, and target repos. | medium | accept | Small, auditable, `shellcheck`-gated. Revisit if the scripts gain network fetches or privileged operations. |
 | B4 | Publicly-callable reusable workflow: any GitHub repo can call `sdl-validate.yml@v1`. By design (fork-PR validation); it runs only against the caller's checkout with the caller's token and exposes no savioke secret. | low | accept | Revisit if any secret is ever introduced into the workflow. |
 | B5 | Moving `v1` tag: consumers pin `@v1` and accept moving tags, so a bad release reaches all of them at once; a force-moved tag also weakens reproducibility. | medium | accept | Single consumer today. Revisit (recommend pinning exact tags or immutable releases) as consumer count grows. |
-| B6 | Unpinned third-party actions: workflows pin `actions/*` by major tag (`@v4`, `@v5`), not by SHA; a compromised action tag would run in CI. | medium | mitigate-later | Pin by SHA. Revisit on the next workflow edit. |
+| B6 | Unpinned third-party actions: a compromised action tag would run in CI. Mitigated 2026-06-10 (cycle 2026-06-10-pin-actions-sha): `actions/*` pinned by commit SHA, Dependabot keeps them current. | medium | mitigated | Revisit if a new unpinned action is added. |
 
 ## Maintenance
 

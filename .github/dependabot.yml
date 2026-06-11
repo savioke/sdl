@@ -1,0 +1,16 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    # Batch all action bumps into one PR so the SDL gate sees at most one
+    # workflow-change cycle per week, usually zero.
+    groups:
+      actions:
+        patterns:
+          - "*"
+    # Our own reusable workflow is pinned to the moving @v1 tag on purpose
+    # (baseline:B5); don't let Dependabot pin it to a SHA.
+    ignore:
+      - dependency-name: savioke/sdl
