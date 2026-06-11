@@ -64,7 +64,7 @@ They update later with `cd ~/.sdl-governance && git pull`. Symlinks mean updates
 Skills and the validator are pulled live from this repo by all consumers (devs via symlinks, CI via `actions/checkout`). To ship a change:
 
 1. Make the change on a branch in this repo.
-2. Open a PR. Self-review carefully — there's no second-order SDL gate on this repo, you are the gate. Bad logic here breaks every other repo's CI.
+2. Open a PR. This repo runs its own SDL gate (`.github/workflows/sdl.yml`, self-referential at `@v1`) plus `self-check.yml` unit tests — but you are still the primary reviewer: single maintainer, no second human. Bad logic here breaks every other repo's CI, so self-review carefully.
 3. Merge to `main`.
 4. Move the appropriate version tag forward (or cut a new one) so consuming repos pick it up.
 
