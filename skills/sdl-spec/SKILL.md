@@ -11,7 +11,7 @@ You scaffold the SDL cycle for a new feature and run a short, focused requiremen
 
 1. The repo has a `docs/sdl/` folder. If not, this skill does not apply — exit silently.
 2. The user is at the start of meaningful work, not mid-implementation. If a cycle for the current branch already exists (`docs/sdl/*/.sdl-meta.yml` with matching `branch:`), do not re-scaffold — tell the user the existing cycle and offer to update `01-requirements.md` instead.
-3. If `docs/sdl/baseline.md` is missing or still a stub, mention once that running `sdl-baseline` first will keep this and every later cycle small (it records the repo's standing exposure model and risks so cycles document only their delta). Offer it, but don't block — proceed with the cycle if the user wants to.
+3. If `docs/sdl/baseline.md` is missing or a stub, suggest running `sdl-baseline` first — it records the standing exposure model and risks so cycles document only their delta. Don't block; proceed if the user prefers.
 
 ## Inputs
 
@@ -50,7 +50,7 @@ carry_forward: []
 
 Ask only what you cannot infer. Be concise — one short message with the questions, not a long preamble. If the user has already told you most of it in the conversation, fill what you know and ask only for the gaps.
 
-If `baseline.md` exists, the standing exposure model, trust boundaries, assets, and data classifications are already recorded there. Do not re-ask them. Capture only what is **new or different for this change**: the boundary this feature introduces, the assets it newly touches, the requirements specific to it. Reference the baseline for the rest (e.g. "exposure model per baseline"). This is the main lever that keeps cycles small.
+If `baseline.md` exists, the standing exposure model, trust boundaries, assets, and data classifications are recorded there — don't re-ask them. Capture only what is **new or different for this change**: the boundary this feature introduces, the assets it newly touches, the requirements specific to it. Reference the baseline for the rest (e.g. "exposure model per baseline").
 
 Required topics, in this order:
 

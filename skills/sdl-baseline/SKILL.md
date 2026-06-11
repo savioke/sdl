@@ -5,16 +5,12 @@ description: Author the repo-level SDL security baseline once, when a repo adopt
 
 # sdl-baseline
 
-You author the repo's security baseline: the standing facts every future SDL cycle inherits. This runs **once** per repo (and is updated rarely). Its purpose is to pay the "establish the whole security posture" cost a single time, here, so that per-feature cycles document only their delta instead of re-deriving the exposure model and re-discovering pre-existing risks every time.
+You author the repo's security baseline: the standing facts every future SDL cycle inherits. Run once per repo; update rarely. Per-feature cycles reference it instead of re-deriving the exposure model and re-discovering standing risks.
 
 ## Preconditions
 
 1. The repo has a `docs/sdl/` folder. If not, this skill does not apply — exit silently.
 2. `docs/sdl/baseline.md` is missing or still a stub. If it exists with real content, do not overwrite — tell the user it exists and offer to update specific sections instead.
-
-## Why this exists
-
-Without a baseline, the first feature cycle in a repo absorbs the entire pre-existing security posture (every unauthenticated endpoint, every standing deferral), and later cycles re-explain the deployment model and re-list the same standing risks. The baseline is the home for all of that, written once. A 30-line change should then produce a 30-line-change-sized cycle, not a whole-codebase audit.
 
 ## What to do
 
@@ -57,4 +53,4 @@ Tell the user:
 
 ## Tone
 
-This is a one-time setup that makes everything after it lighter. Frame it that way. Don't make it feel like a heavyweight audit — it's the inventory that lets the heavyweight audit never need to happen again.
+A one-time inventory, not an audit. Keep it concise.

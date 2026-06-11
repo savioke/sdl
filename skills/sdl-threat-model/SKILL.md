@@ -9,18 +9,16 @@ You produce the threat model for an in-flight SDL cycle. Output is `02-threat-mo
 
 ## Proportionality
 
-The threat model must be proportional to the change. Most diffs introduce **zero to two** genuinely new threats. A 30-line change with one new trust boundary has one threat, not four.
+Most diffs introduce **zero to two** new threats. A concern earns a full stanza only if it is **presently reachable in the code as written by this diff**. Everything else is a one-line note:
 
-A concern earns a full threat stanza only if it is **presently reachable in the code as written by this diff**. Everything else is a one-line note, not a stanza:
+- **Not reachable today** (the current inputs make it impossible) → "Noted for future cycles".
+- **Not this code** (IAM scope, a permission someone already holds, a platform default) → "Out-of-scope threats", with the owner.
+- **Covered by the baseline or a prior cycle** → reference by ID; don't restate.
+- **Forward-looking habit risk** → "Noted for future cycles".
 
-- **Not reachable today** ("if the YAML ever grows", "a malformed document would…", but the current inputs make it impossible) → one line under "Noted for future cycles".
-- **Not this code** (an IAM-scope concern, a permission someone already holds, a platform default) → one line under "Out-of-scope threats" with the owner.
-- **Already covered by the baseline or a prior cycle** → reference it by ID; do not restate it.
-- **Forward-looking habit risk** ("a future maintainer might put secrets here") → one line under "Noted for future cycles".
+The Description / Likelihood / Impact / Mitigation / Mitigation-type / Defense-in-depth structure is for live threats only.
 
-Do not give these the Description / Likelihood / Impact / Mitigation / Mitigation-type / Defense-in-depth treatment. That structure is for live threats only. Padding the model with speculative stanzas buries the one threat that matters and makes small changes read as if they were large ones.
-
-Read `docs/sdl/baseline.md` first (if present) for the repo's standing exposure model and standing risks. Reference them; don't re-derive them each cycle.
+Read `docs/sdl/baseline.md` first (if present) and reference its standing exposure model and risks rather than re-deriving them.
 
 ## Preconditions
 
@@ -85,12 +83,12 @@ If a prior threat is now obsolete (the code path it covered is gone), say so exp
 
 ### 5. One-line notes: out of scope and noted for future cycles
 
-Everything you considered but did not write as a live threat goes here as a **single line each** — no stanza.
+Everything you considered but did not write as a live threat goes here, **one line each**.
 
-- **Out-of-scope threats:** concerns owned elsewhere (IAM scope, a platform default, an upstream layer covered by the baseline or a prior cycle) or explicitly deferred/accepted. One line with the rationale and the owner. This is the auditor-visible reason a known concern wasn't mitigated here.
-- **Noted for future cycles:** concerns that are not reachable with the code as written but would become real if the code grew a certain way (e.g. "if user-data ever carries a non-allowlisted string, switch to a YAML marshaller"). One line each. These are signposts for the next maintainer, not threats.
+- **Out-of-scope threats:** concerns owned elsewhere (IAM scope, a platform default, an upstream layer covered by the baseline or a prior cycle) or explicitly deferred/accepted. One line with rationale and owner — the auditor-visible reason a known concern wasn't mitigated here.
+- **Noted for future cycles:** concerns not reachable with the code as written but worth a signpost if it grows a certain way (e.g. "if user-data ever carries a non-allowlisted string, switch to a YAML marshaller").
 
-If a note here starts wanting a Mitigation and a Likelihood/Impact, it's either a real threat (promote it to a stanza in step 3) or you're over-documenting it (keep it to one line).
+If a note wants a Mitigation and a Likelihood/Impact, either it's a real threat (promote it to step 3) or keep it to one line.
 
 ### 6. Report
 

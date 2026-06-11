@@ -8,7 +8,7 @@ A lightweight evidence trail for IEC 62443-4-1. Each branch/PR generates a folde
 
 ## What you do
 
-0. **Once per repo, initialize the baseline.** The first time a repo adopts SDL, ask the agent to run `sdl-baseline` ("initialize the SDL baseline"). It scans the codebase once and records the repo's standing security posture — exposure model, trust boundaries, standing risks — in `docs/sdl/baseline.md`. This is what keeps every later cycle small: feature cycles reference the baseline instead of re-deriving it. You do this once, not per branch.
+0. **Once per repo, initialize the baseline.** The first time a repo adopts SDL, ask the agent to run `sdl-baseline` ("initialize the SDL baseline"). It scans the codebase once and records the repo's standing security posture — exposure model, trust boundaries, standing risks — in `docs/sdl/baseline.md`, which later cycles reference instead of re-deriving. Once per repo, not per branch.
 1. **Start a feature branch** as usual.
 2. **Talk to the agent** about what you're building. It will invoke `sdl-spec` to scaffold `docs/sdl/YYYY-MM-DD-<branch-slug>/` and ask a few short questions (assets touched, trust boundaries, data classification, external inputs). Answer them in conversation. The agent fills the file.
 3. **Build the feature.** As architecture firms up, the agent invokes `sdl-threat-model` to populate `02-threat-model.md`. Skim and correct.
@@ -40,7 +40,7 @@ Note that this is the only step that has to happen *in the repo*. Cloning a repo
 ## Things to know
 
 - **One cycle per branch.** New branch = new folder. Don't reuse old ones, even for "phase 2" work — cross-reference instead. `sdl-spec` will prompt you.
-- **Cycles are sized to the change.** A small change should produce a small cycle. The skills document only the delta over the baseline — the new trust boundary, the real new threats (usually zero to two), the security categories the diff actually touches. If a cycle for a tiny change reads like a whole-codebase audit, the baseline is probably missing or stale — run `sdl-baseline`.
+- **Cycles are sized to the change.** The skills document only the delta over the baseline — the new trust boundary, the real new threats (usually zero to two), the categories the diff touches. If a tiny change produces an audit-sized cycle, the baseline is probably missing or stale — run `sdl-baseline`.
 - **The agent is a first draft, not the final word.** Especially threat models. Read what it wrote and correct domain-specific gaps.
 - **Residual risks are valuable.** When the agent says "I couldn't verify X," that's the audit-relevant honesty. Don't pressure it to claim coverage it didn't establish.
 - **Carry-forward works.** If a previous cycle deferred something, `sdl-spec` surfaces it at the start of the next cycle so it doesn't get lost.

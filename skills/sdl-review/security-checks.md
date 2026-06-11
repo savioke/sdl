@@ -90,4 +90,4 @@ For each category, decide whether the diff introduces or modifies code in that a
 
 When in doubt about whether a category genuinely applies, err toward applying it — consider it and reach a verdict rather than skipping silently. Silent skips are how things get missed.
 
-But "considered" does not mean "gets its own stanza". Reaching a verdict of "does not apply" for a category the diff never touches is recorded in the single collapsed "Not applicable" line in `04-verification.md`, not as a `### Category` / `Applies: no` subsection. Reserve subsections for categories the diff actually touches. Accounting for every category and writing a stanza for every category are different things; do the first, not the second.
+A verdict of "does not apply" for a category the diff never touches goes in the single collapsed "Not applicable" line in `04-verification.md`, not its own `### Category` subsection. Reserve subsections for categories the diff touches.
