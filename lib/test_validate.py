@@ -6,10 +6,12 @@
 No third-party dependencies, so CI runs it with a bare Python.
 """
 
+import os
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import validate as v  # noqa: E402
@@ -73,6 +75,29 @@ class ClassifyFiles(unittest.TestCase):
             v.code_changed([P("README.md"), P("docs/admin-setup.md"), P("config/app.yaml")])
         )
         self.assertFalse(v.code_changed([]))
+
+
+class CurrentBranch(unittest.TestCase):
+    """Branch detection must survive the detached-HEAD checkout of PR events."""
+
+    def test_prefers_github_head_ref(self):
+        # pull_request event: HEAD is detached, but GITHUB_HEAD_REF names the
+        # source branch. git would return "HEAD" here, so the env must win.
+        with mock.patch.dict(os.environ, {"GITHUB_HEAD_REF": "feature/login"}):
+            with mock.patch.object(v, "run", return_value="HEAD\n"):
+                self.assertEqual(v.current_branch(), "feature/login")
+
+    def test_falls_back_to_git_when_unset(self):
+        # push event / local run: no GITHUB_HEAD_REF, trust git.
+        with mock.patch.dict(os.environ, {}, clear=True):
+            with mock.patch.object(v, "run", return_value="main\n"):
+                self.assertEqual(v.current_branch(), "main")
+
+    def test_blank_head_ref_falls_back(self):
+        # GITHUB_HEAD_REF is defined-but-empty on push events.
+        with mock.patch.dict(os.environ, {"GITHUB_HEAD_REF": ""}):
+            with mock.patch.object(v, "run", return_value="dev\n"):
+                self.assertEqual(v.current_branch(), "dev")
 
 
 class IsNonstub(unittest.TestCase):
