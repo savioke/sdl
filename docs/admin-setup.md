@@ -42,7 +42,9 @@ Have whoever owns the repo run, on their workstation:
 ~/.sdl-governance/scripts/sync-to-repo.sh /path/to/their/repo
 ```
 
-That drops `.github/workflows/sdl.yml` and creates `docs/sdl/.gitkeep`. Both get committed. No admin step is needed — the workflow checks this public repo out with the default `GITHUB_TOKEN`, so CI works as soon as the files land, including on Dependabot and external fork PRs.
+That drops `.github/workflows/sdl.yml`, creates `docs/sdl/.gitkeep`, and writes a `docs/sdl/baseline.md` stub. All get committed. No admin step is needed — the workflow checks this public repo out with the default `GITHUB_TOKEN`, so CI works as soon as the files land, including on Dependabot and external fork PRs.
+
+Then have them run the `sdl-baseline` skill once ("initialize the SDL baseline"). It records the repo's standing security posture — exposure model, trust boundaries, standing risks — in `baseline.md`, which later cycles reference instead of re-deriving. CI emits a non-fatal `[warn]` until the baseline is filled.
 
 ## Onboarding a new developer
 

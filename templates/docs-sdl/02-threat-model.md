@@ -10,7 +10,10 @@
 ## Threats <!-- SR-2 -->
 
 <!-- STRIDE-lite. One subsection per threat with a stable ID (T1, T2, …)
-     so 03-implementation.md and 04-verification.md can reference it. -->
+     so 03-implementation.md and 04-verification.md can reference it.
+     Proportionality: only threats presently reachable in the code as written
+     get a stanza. Most changes have zero to two. Speculative, not-reachable-today,
+     or owned-elsewhere concerns go as one-liners in the two sections below, not here. -->
 
 ### T1 — <short name>
 
@@ -29,4 +32,11 @@
 
 ## Out-of-scope threats
 
-<!-- Threats considered and explicitly deferred or accepted, with rationale. -->
+<!-- One line each. Concerns owned elsewhere (IAM scope, platform default, an
+     upstream layer covered by baseline.md or a prior cycle) or explicitly
+     deferred/accepted, with rationale and owner. No stanzas here. -->
+
+## Noted for future cycles
+
+<!-- One line each. Concerns not reachable with the code as written but worth a
+     signpost for the next maintainer if the code grows a certain way. No stanzas. -->

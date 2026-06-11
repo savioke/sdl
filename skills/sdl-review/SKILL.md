@@ -17,6 +17,7 @@ You are the SDL pre-commit / pre-PR reviewer. Your job is to produce honest evid
 - Current git branch and the merge base against the default branch (`git merge-base HEAD origin/main` or equivalent).
 - The diff: `git diff <merge-base>..HEAD`.
 - The cycle folder: `docs/sdl/<slug>/` containing `01-requirements.md`, `02-threat-model.md`, `03-implementation.md`, `04-verification.md`, `.sdl-meta.yml`.
+- `docs/sdl/baseline.md` if present — the repo's standing exposure model and standing risk register. Reference standing risks by ID; don't re-find them in every cycle's verification.
 - `security-checks.md` (sibling file to this SKILL.md) — the category list of security concerns to consider.
 
 ## What to do
@@ -71,9 +72,10 @@ If a threat from the model has no corresponding code change, that is a finding �
 - Set Reviewer to `sdl-review (Claude/Copilot) + <username from git config>`.
 - Set Date to today.
 - Set Diff range to the merge-base..HEAD range you used.
-- For each category from `security-checks.md`, write a `### <Category>` subsection under "Checks performed" with the finding.
+- Write a `### <Category>` subsection under "Checks performed" **only for categories the diff actually touches** — a verified positive practice, or a finding. Collapse the rest into one line at the end: `Not applicable (no code in these areas): persistence, cryptography, network/transport, authn/authz, frontend, native, CI/supply-chain.` Do not write a `### Category` / `Applies: no` stanza per non-applicable category.
 - Reference any static analysis or SBOM output already present in CI.
 - Populate the Residual risks table with anything you couldn't verify or that should be deferred. Each row needs an ID (R1, R2, …), description, severity, disposition, and a carry-forward target if applicable.
+- If a residual risk is a **standing condition** (pre-existing, not introduced by this diff — e.g. an unauthenticated endpoint that predates it), reference the baseline register by ID (`inherits baseline:B2`) if present, or suggest adding it to `docs/sdl/baseline.md` via `sdl-baseline`. Keep this cycle's R-items to risks this diff introduces or leaves open.
 - Leave the sign-off checkboxes unchecked. The human signs off, not you.
 
 **`.sdl-meta.yml`:**

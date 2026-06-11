@@ -11,14 +11,18 @@
 
 ## Checks performed <!-- SVV-1, SVV-2 -->
 
-<!-- For each security-checks.md category that applied to this diff,
-     record the finding. sdl-review writes these with file:line refs. -->
+<!-- Write a subsection ONLY for categories the diff actually touches.
+     Collapse all non-applicable categories into the single "Not applicable"
+     line at the end. Most changes touch two to four categories. -->
 
-### <Category, e.g. "New SQL queries">
+### <Category the diff touches, e.g. "New SQL queries">
 
-- **Applies:** yes | no
 - **Finding:**
 - **References:** <file:line, file:line>
+
+<!-- Repeat for each category the diff touches, then one collapsed line: -->
+
+**Not applicable (no code in these areas):** <comma-separated list of the categories that don't apply>
 
 ## Static analysis and SBOM <!-- SVV-3, SM-9 -->
 

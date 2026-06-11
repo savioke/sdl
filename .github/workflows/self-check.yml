@@ -42,6 +42,8 @@ jobs:
             skills/sdl-threat-model/SKILL.md \
             skills/sdl-review/SKILL.md \
             skills/sdl-review/security-checks.md \
+            skills/sdl-baseline/SKILL.md \
+            templates/baseline.md \
             templates/docs-sdl/.sdl-meta.yml \
             templates/docs-sdl/01-requirements.md \
             templates/docs-sdl/02-threat-model.md \

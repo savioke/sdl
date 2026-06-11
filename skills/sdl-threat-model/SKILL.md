@@ -7,6 +7,19 @@ description: Produce a STRIDE-lite threat model for the current SDL cycle. Use w
 
 You produce the threat model for an in-flight SDL cycle. Output is `02-threat-model.md`. Goal: identify what could go wrong with what's actually being built, propose mitigations, link to prior-cycle threats so we don't relitigate.
 
+## Proportionality
+
+Most diffs introduce **zero to two** new threats. A concern earns a full stanza only if it is **presently reachable in the code as written by this diff**. Everything else is a one-line note:
+
+- **Not reachable today** (the current inputs make it impossible) → "Noted for future cycles".
+- **Not this code** (IAM scope, a permission someone already holds, a platform default) → "Out-of-scope threats", with the owner.
+- **Covered by the baseline or a prior cycle** → reference by ID; don't restate.
+- **Forward-looking habit risk** → "Noted for future cycles".
+
+The Description / Likelihood / Impact / Mitigation / Mitigation-type / Defense-in-depth structure is for live threats only.
+
+Read `docs/sdl/baseline.md` first (if present) and reference its standing exposure model and risks rather than re-deriving them.
+
 ## Preconditions
 
 1. The repo has a `docs/sdl/` folder. If not, this skill does not apply — exit silently.
@@ -15,6 +28,7 @@ You produce the threat model for an in-flight SDL cycle. Output is `02-threat-mo
 ## Inputs
 
 - The cycle folder for the current branch (find via `docs/sdl/*/.sdl-meta.yml` matching the branch).
+- `docs/sdl/baseline.md` if present — the repo's standing exposure model, trust boundaries, and standing risk register (B1, B2, …). Inherit from it; don't re-derive.
 - `01-requirements.md` — the source of truth for what's in scope, what assets are touched, trust boundaries, external inputs.
 - `02-threat-model.md` from each cycle listed in `.sdl-meta.yml` `related_cycles` — for inheritance.
 - Whatever the user has shared about architecture in the conversation.
@@ -67,9 +81,14 @@ Read `02-threat-model.md` from each cycle in `related_cycles`. For each prior th
 
 If a prior threat is now obsolete (the code path it covered is gone), say so explicitly with one line.
 
-### 5. Out-of-scope threats
+### 5. One-line notes: out of scope and noted for future cycles
 
-Anything you considered and decided not to address in this cycle goes here with a one-line rationale: deferred, accepted, out of product scope, etc. This is the auditor-visible reason a known concern wasn't mitigated.
+Everything you considered but did not write as a live threat goes here, **one line each**.
+
+- **Out-of-scope threats:** concerns owned elsewhere (IAM scope, a platform default, an upstream layer covered by the baseline or a prior cycle) or explicitly deferred/accepted. One line with rationale and owner — the auditor-visible reason a known concern wasn't mitigated here.
+- **Noted for future cycles:** concerns not reachable with the code as written but worth a signpost if it grows a certain way (e.g. "if user-data ever carries a non-allowlisted string, switch to a YAML marshaller").
+
+If a note wants a Mitigation and a Likelihood/Impact, either it's a real threat (promote it to step 3) or keep it to one line.
 
 ### 6. Report
 

@@ -88,4 +88,6 @@ For each category, decide whether the diff introduces or modifies code in that a
 
 ---
 
-When in doubt about whether a category applies, err toward applying it and noting "checked, no concern" rather than skipping silently. Silent skips are how things get missed.
+When in doubt about whether a category genuinely applies, err toward applying it — consider it and reach a verdict rather than skipping silently. Silent skips are how things get missed.
+
+A verdict of "does not apply" for a category the diff never touches goes in the single collapsed "Not applicable" line in `04-verification.md`, not its own `### Category` subsection. Reserve subsections for categories the diff touches.

@@ -89,15 +89,25 @@ def template_dir() -> Path | None:
 def is_nonstub(cycle_file: Path, template_file: Path | None) -> bool:
     """A file is non-stub if it differs from the template AND has more than just
     the comment scaffolding filled in. Heuristic: any non-comment, non-blank line
-    of substantive prose."""
+    of substantive prose. Tracks multi-line HTML comments so their body lines are
+    not mistaken for content."""
     if template_file and cycle_file.read_bytes() == template_file.read_bytes():
         return False
     text = cycle_file.read_text(encoding="utf-8", errors="replace")
+    in_comment = False
     for line in text.splitlines():
         s = line.strip()
         if not s:
             continue
-        if s.startswith("<!--") or s.startswith("#") or s.startswith("|") or s == "---":
+        if in_comment:
+            if "-->" in s:
+                in_comment = False
+            continue
+        if s.startswith("<!--"):
+            if "-->" not in s:
+                in_comment = True
+            continue
+        if s.startswith("#") or s.startswith("|") or s == "---":
             continue
         # A line of actual content.
         return True
@@ -134,6 +144,18 @@ def check_nonstub(cycle: Path, templates: Path | None) -> Result:
     return Result(True, f"{cycle.name}: artifacts have content")
 
 
+def baseline_warning(repo: Path) -> str | None:
+    """Non-fatal: a repo running SDL cycles should have a non-stub baseline so
+    per-cycle docs stay small. Returns a warning message or None. Does not affect
+    exit code (warn-first; may become a hard check in a future major version)."""
+    baseline = repo / "docs" / "sdl" / "baseline.md"
+    if not baseline.is_file():
+        return "no docs/sdl/baseline.md — run the sdl-baseline skill once so cycles can reference standing context instead of re-deriving it"
+    if not is_nonstub(baseline, None):
+        return "docs/sdl/baseline.md is still a stub — run the sdl-baseline skill to fill it"
+    return None
+
+
 def check_meta_branch(cycle: Path, branch: str) -> Result:
     meta = cycle / ".sdl-meta.yml"
     text = meta.read_text(encoding="utf-8", errors="replace")
@@ -167,6 +189,11 @@ def main() -> int:
     for r in results:
         marker = "ok " if r else "FAIL"
         print(f"[{marker}] {r.msg}")
+
+    if code_changed(files):
+        warning = baseline_warning(repo)
+        if warning:
+            print(f"[warn] {warning}")
 
     if failed:
         print(f"\n{len(failed)} check(s) failed.", file=sys.stderr)
