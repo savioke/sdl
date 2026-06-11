@@ -69,6 +69,10 @@ Done.
 
 To update later:
   cd $INSTALL_DIR && git pull
+  # Copilot picks up the new skills immediately (they are symlinked).
+  # Claude Code does NOT — the plugin marketplace is a local clone and does
+  # not auto-refresh. After pulling, also run:
+  #   /plugin marketplace update savioke   (then reload when prompted)
 
 To enable SDL on a project repo:
   $INSTALL_DIR/scripts/sync-to-repo.sh /path/to/repo

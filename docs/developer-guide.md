@@ -25,7 +25,7 @@ gh repo clone savioke/sdl
 ./sdl/scripts/install.sh
 ```
 
-Installs skills globally for Claude Code and Copilot. Updates: `cd ~/.sdl-governance && git pull`.
+Installs skills globally for Claude Code and Copilot. To update: `cd ~/.sdl-governance && git pull`. Copilot picks up the new skills immediately (they are symlinked); **Claude Code does not** — its plugin marketplace is a local clone that does not auto-refresh, so after pulling also run `/plugin marketplace update savioke` and reload when prompted.
 
 ## Per-repo setup (run once when a repo first adopts SDL)
 
