@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SDL Report</title>
+<script src="/_viewer/marked.min.js"></script>
+<style>
+  :root { --fg:#1a1a1a; --muted:#666; --bg:#fff; --side:#f6f6f7; --line:#e2e2e4; --accent:#2b6cb0; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.6 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; color:var(--fg); }
+  #app { display:flex; min-height:100vh; }
+  nav { width:300px; flex:0 0 300px; background:var(--side); border-right:1px solid var(--line);
+        overflow-y:auto; height:100vh; position:sticky; top:0; padding:1rem 0; }
+  nav h1 { font-size:1rem; margin:0 1rem .75rem; }
+  nav .repo { font-size:.75rem; color:var(--muted); margin:0 1rem 1rem; word-break:break-all; }
+  nav .group { margin:0 0 .5rem; }
+  nav .cycle { padding:.35rem 1rem .15rem; font-weight:600; font-size:.85rem; }
+  nav .cycle .badge { float:right; font-weight:400; font-size:.7rem; color:var(--muted); border:1px solid var(--line);
+        border-radius:3px; padding:0 .35rem; background:#fff; }
+  nav a { display:block; padding:.2rem 1rem .2rem 1.5rem; color:var(--accent); text-decoration:none; font-size:.85rem; cursor:pointer; }
+  nav a.top { padding-left:1rem; font-weight:600; }
+  nav a:hover { background:#ececee; }
+  nav a.active { background:#e3edf7; font-weight:600; }
+  main { flex:1; padding:2rem 3rem; max-width:920px; overflow-x:auto; }
+  main pre { background:var(--side); padding:1rem; border-radius:6px; overflow-x:auto; }
+  main code { background:var(--side); padding:.1em .35em; border-radius:3px; font-size:.9em; }
+  main pre code { background:none; padding:0; }
+  main table { border-collapse:collapse; width:100%; margin:1rem 0; font-size:.9rem; }
+  main th, main td { border:1px solid var(--line); padding:.45rem .6rem; text-align:left; vertical-align:top; }
+  main th { background:var(--side); }
+  main h1,main h2,main h3 { line-height:1.25; }
+  main h2 { border-bottom:1px solid var(--line); padding-bottom:.3rem; margin-top:2rem; }
+  main blockquote { margin:1rem 0; padding:.2rem 1rem; border-left:3px solid var(--line); color:var(--muted); }
+  .empty { color:var(--muted); }
+</style>
+</head>
+<body>
+<div id="app">
+  <nav id="nav"><h1>SDL Report</h1><div class="repo" id="repo"></div></nav>
+  <main id="main"><p class="empty">Loading…</p></main>
+</div>
+<script>
+const nav = document.getElementById('nav');
+const main = document.getElementById('main');
+let active = null;
+
+function link(label, path, cls) {
+  const a = document.createElement('a');
+  a.textContent = label;
+  a.className = cls || '';
+  a.onclick = () => load(path, a);
+  nav.appendChild(a);
+  return a;
+}
+
+async function load(path, el) {
+  if (active) active.classList.remove('active');
+  if (el) { el.classList.add('active'); active = el; }
+  main.innerHTML = '<p class="empty">Loading…</p>';
+  try {
+    const res = await fetch(path);
+    if (!res.ok) throw new Error(res.status);
+    const text = await res.text();
+    if (path.endsWith('.yml')) {
+      const pre = document.createElement('pre');
+      pre.textContent = text;
+      main.innerHTML = '';
+      main.appendChild(pre);
+    } else {
+      main.innerHTML = marked.parse(text);
+    }
+    main.scrollTop = 0;
+    location.hash = encodeURIComponent(path);
+  } catch (e) {
+    main.innerHTML = `<p class="empty">Failed to load ${path} (${e.message}).</p>`;
+  }
+}
+
+(async function init() {
+  let m;
+  try {
+    m = await (await fetch('/_manifest')).json();
+  } catch (e) {
+    main.innerHTML = '<p class="empty">Could not load manifest. Is sdl-serve.py running?</p>';
+    return;
+  }
+  document.getElementById('repo').textContent = m.repo;
+  const byPath = {};
+  for (const f of m.topLevel) byPath[f.path] = link(f.name, f.path, 'top');
+  for (const c of m.cycles) {
+    const g = document.createElement('div'); g.className = 'group';
+    const head = document.createElement('div'); head.className = 'cycle';
+    head.textContent = c.dir;
+    const status = c.meta.status;
+    if (status) { const b = document.createElement('span'); b.className = 'badge'; b.textContent = status; head.appendChild(b); }
+    nav.appendChild(g); g.appendChild(head);
+    for (const f of c.files) byPath[f.path] = (() => {
+      const a = link(f.name, f.path); g.appendChild(a); return a;
+    })();
+  }
+  const want = decodeURIComponent(location.hash.replace(/^#/, ''));
+  const start = byPath[want] ? want : (m.topLevel[0] && m.topLevel[0].path);
+  if (start) load(start, byPath[start]);
+  else main.innerHTML = '<p class="empty">No docs/sdl content found.</p>';
+})();
+</script>
+</body>
+</html>

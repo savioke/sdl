@@ -48,6 +48,16 @@ Note that this is the only step that has to happen *in the repo*. Cloning a repo
 - **Don't delete cycle folders, ever.** Even for ripped-out features. Auditors want history.
 - **If you commit without an agent**, no SDL artifacts get written. CI will catch it on the PR. Fix by asking the agent to run `sdl-spec` (if no cycle exists) and `sdl-review` (to populate the rest), then push.
 
+## Browsing the SDL docs in a browser
+
+To read a repo's cycles as rendered HTML instead of raw markdown:
+
+```
+python3 ~/.sdl-governance/scripts/sdl-serve.py [repo-path]   # defaults to cwd
+```
+
+Open http://127.0.0.1:8000/. The sidebar lists the baseline, the index, and every cycle (with status); clicking a file renders it. The viewer lives in the governance install — nothing is added to your repo — and it reads `docs/sdl/` live, so it always reflects the current files. It binds localhost only and serves only files under `docs/sdl/`. Stop it with Ctrl-C.
+
 ## When skills don't fire automatically
 
 Skills trigger on intent. If yours misses, just ask:

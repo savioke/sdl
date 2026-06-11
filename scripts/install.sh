@@ -77,4 +77,7 @@ To update later:
 To enable SDL on a project repo:
   $INSTALL_DIR/scripts/sync-to-repo.sh /path/to/repo
 
+To browse a repo's SDL docs as HTML (localhost only):
+  python3 $INSTALL_DIR/scripts/sdl-serve.py /path/to/repo
+
 EOF
