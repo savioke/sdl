@@ -4,7 +4,7 @@
 slug: 2026-06-11-reduce-human-interaction
 branch: reduce-human-interaction
 created: 2026-06-11
-pr:
+pr: 8
 status: review
 
 related_cycles: [2026-06-10-adopt-sdl-governance]
