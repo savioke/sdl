@@ -29,7 +29,7 @@ No new residual risks. `baseline:B6` moves from `mitigate-later` to mitigated. T
 
 ## Sign-off
 
-- [ ] Threat model mitigations verified or residual risk recorded
-- [ ] Secure coding checks for applicable categories complete
-- [ ] Static analysis and dependency scan reviewed
-- [ ] Residual risks documented and dispositioned
+- [x] Threat model mitigations verified or residual risk recorded
+- [x] Secure coding checks for applicable categories complete
+- [x] Static analysis and dependency scan reviewed
+- [x] Residual risks documented and dispositioned
