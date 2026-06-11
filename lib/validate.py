@@ -13,6 +13,7 @@ merge base; defaults to origin/main.
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import subprocess
 import sys
@@ -68,6 +69,13 @@ def run(cmd: list[str], check: bool = True) -> str:
 
 
 def current_branch() -> str:
+    # GitHub Actions checks out a detached merge commit for `pull_request`
+    # events, so `git rev-parse --abbrev-ref HEAD` returns "HEAD" and never
+    # matches a cycle's `branch:` field. Prefer the CI-provided source-branch
+    # name when present; fall back to git for `push` events and local runs.
+    head_ref = os.environ.get("GITHUB_HEAD_REF", "").strip()
+    if head_ref:
+        return head_ref
     return run(["git", "rev-parse", "--abbrev-ref", "HEAD"]).strip()
 
 
