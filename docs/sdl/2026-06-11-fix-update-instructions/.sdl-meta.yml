@@ -5,7 +5,7 @@ slug: 2026-06-11-fix-update-instructions
 branch: fix-update-instructions
 created: 2026-06-11
 pr: 9
-status: review
+status: merged
 
 related_cycles: [2026-06-11-reduce-human-interaction]
 

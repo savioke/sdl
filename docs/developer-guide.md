@@ -44,9 +44,25 @@ Note that this is the only step that has to happen *in the repo*. Cloning a repo
 - **The agent is a first draft, not the final word.** Especially threat models. Read what it wrote and correct domain-specific gaps.
 - **Residual risks are valuable.** When the agent says "I couldn't verify X," that's the audit-relevant honesty. Don't pressure it to claim coverage it didn't establish.
 - **Carry-forward works.** If a previous cycle deferred something, `sdl-spec` surfaces it at the start of the next cycle so it doesn't get lost.
+- **Dependency bumps get a lighter path.** Minor/patch bumps (Dependabot or otherwise) don't need a full cycle: the agent runs `sdl-dep-update`, which writes a one-file `dep-update.md` record the validator checks. Major bumps and new dependencies escalate to a normal cycle. Policy: [dependency-updates.md](dependency-updates.md); recipe: [Adding SDL docs to a Dependabot PR](#adding-sdl-docs-to-a-dependabot-pr).
 - **CI is the gate.** There are no local pre-commit hooks. The PR will fail if SDL artifacts are missing or stub. Catch it earlier by asking the agent to run `sdl-review` before pushing.
 - **Don't delete cycle folders, ever.** Even for ripped-out features. Auditors want history.
 - **If you commit without an agent**, no SDL artifacts get written. CI will catch it on the PR. Fix by asking the agent to run `sdl-spec` (if no cycle exists) and `sdl-review` (to populate the rest), then push.
+
+## Adding SDL docs to a Dependabot PR
+
+Dependabot doesn't know about SDL, so its PRs arrive without artifacts and fail the gate (workflow pin bumps count as code). To fix one:
+
+```
+gh pr checkout <number>    # branch looks like dependabot/github_actions/actions-3e1200532a
+claude
+```
+
+Ask for an SDL dependency-update cycle ("write the SDL dependency update record for this branch"). The agent runs `sdl-dep-update`: confirms the diff qualifies for the routine tier, verifies pins against upstream tags, checks advisories and release notes, and writes `docs/sdl/<date>-<slug>/` with the `dep-update.md` record.
+
+Then **read the record before you push.** The checked boxes are your attestation that the dependency changes were actually looked at — this step exists to make you affirm that, not to launder a bot PR past the gate. Commit and push to the PR branch; validation passes and the PR is mergeable.
+
+If the bump is a major version, the agent will say so and escalate to a full cycle (`sdl-spec`) instead — that's intended, not a malfunction.
 
 ## Browsing the SDL docs in a browser
 
@@ -66,6 +82,7 @@ Skills trigger on intent. If yours misses, just ask:
 - "Run sdl-spec for this feature"
 - "Threat model this"
 - "Review the diff for SDL"
+- "Write the SDL dependency update record" (Dependabot / version-bump branches)
 
 ## When you disagree with the agent
 

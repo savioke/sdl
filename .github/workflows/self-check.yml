@@ -19,7 +19,16 @@ jobs:
           python -c "import ast; ast.parse(open('lib/validate.py').read())"
           python lib/validate.py --help
       - name: Unit tests
-        run: python -m unittest -v lib.test_validate
+        run: python -m unittest -v lib.test_validate lib.test_check_pins
+
+  pins:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Action pins match upstream tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 lib/check_pins.py --exempt savioke/sdl
 
   shell:
     runs-on: ubuntu-latest
@@ -45,16 +54,20 @@ jobs:
             skills/sdl-review/SKILL.md \
             skills/sdl-review/security-checks.md \
             skills/sdl-baseline/SKILL.md \
+            skills/sdl-dep-update/SKILL.md \
             templates/baseline.md \
             templates/docs-sdl/.sdl-meta.yml \
             templates/docs-sdl/01-requirements.md \
             templates/docs-sdl/02-threat-model.md \
             templates/docs-sdl/03-implementation.md \
             templates/docs-sdl/04-verification.md \
+            templates/docs-sdl/dep-update.md \
             .github/workflows/sdl-validate.yml \
             scripts/install.sh \
             scripts/sync-to-repo.sh \
             lib/validate.py \
+            lib/check_pins.py \
+            docs/dependency-updates.md \
             docs/62443-mapping.md \
             docs/developer-guide.md \
             docs/admin-setup.md

