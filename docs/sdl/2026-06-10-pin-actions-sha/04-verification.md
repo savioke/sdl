@@ -23,6 +23,8 @@
 
 No new residual risks. `baseline:B6` moves from `mitigate-later` to mitigated. The pins must be kept current (Dependabot) and any newly-added action must also be pinned, or B6 reopens.
 
+Note (2026-07-09): consumers pin `sdl-validate.yml@v1`, and `v1` was not moved when this cycle merged — the pinned workflow reached consumer CI only on 2026-07-09, when `v1` advanced past this cycle during `2026-07-09-actions-3e1200532a`. Until then the mitigation covered only this repo's own CI.
+
 | ID | Description | Severity | Disposition | Carry-forward target |
 |----|-------------|----------|-------------|----------------------|
 | —  | None new; closes baseline:B6 |  | accept |  |

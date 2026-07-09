@@ -56,7 +56,7 @@ No confidentiality assets: the repo is public and holds no secrets or customer d
 | B3 | Workstation scripts run with developer privileges: `install.sh` / `sync-to-repo.sh` write into `~/.claude`, `~/.copilot`, and target repos. | medium | accept | Small, auditable, `shellcheck`-gated. Revisit if the scripts gain network fetches or privileged operations. |
 | B4 | Publicly-callable reusable workflow: any GitHub repo can call `sdl-validate.yml@v1`. By design (fork-PR validation); it runs only against the caller's checkout with the caller's token and exposes no savioke secret. | low | accept | Revisit if any secret is ever introduced into the workflow. |
 | B5 | Moving `v1` tag: consumers pin `@v1` and accept moving tags, so a bad release reaches all of them at once; a force-moved tag also weakens reproducibility. | medium | accept | Single consumer today. Revisit (recommend pinning exact tags or immutable releases) as consumer count grows. |
-| B6 | Unpinned third-party actions: a compromised action tag would run in CI. Mitigated 2026-06-10 (cycle 2026-06-10-pin-actions-sha): `actions/*` pinned by commit SHA, Dependabot keeps them current. | medium | mitigated | Revisit if a new unpinned action is added. |
+| B6 | Unpinned third-party actions: a compromised action tag would run in CI. Mitigated 2026-06-10 (cycle 2026-06-10-pin-actions-sha): `actions/*` pinned by commit SHA, Dependabot keeps them current. Reached consumer CI 2026-07-09 when `v1` advanced (cycle 2026-07-09-actions-3e1200532a). | medium | mitigated | Revisit if a new unpinned action is added. Tag moves lag merges — a mitigation in `sdl-validate.yml` is not live for consumers until `v1` advances. |
 
 ## Maintenance
 
