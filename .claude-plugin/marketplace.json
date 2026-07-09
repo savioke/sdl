@@ -1,10 +1,10 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "savioke",
-  "displayName": "Savioke",
-  "description": "Savioke internal Claude Code plugins. Currently hosts the SDL governance plugin.",
+  "name": "relay-sdl",
+  "displayName": "Relay SDL",
+  "description": "Relay's SDL governance plugin for Claude Code.",
   "owner": {
-    "name": "savioke"
+    "name": "relay"
   },
   "plugins": [
     {
