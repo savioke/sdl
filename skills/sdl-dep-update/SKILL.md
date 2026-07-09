@@ -57,8 +57,8 @@ It creates `docs/sdl/YYYY-MM-DD-<slug>/` with `.sdl-meta.yml` (including
 the updates table (exact old/new versions), checks you actually performed,
 notes.
 
-Regenerate the index (`python3 <governance>/lib/gen_index.py`), run the
-validator (`python3 <governance>/lib/validate.py --base origin/main`), and
+Regenerate the index (`python3 ~/.sdl-governance/lib/gen_index.py`), run the
+validator (`python3 ~/.sdl-governance/lib/validate.py --base origin/main`), and
 show the user the result.
 
 ## Tone
