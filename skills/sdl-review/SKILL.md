@@ -84,11 +84,13 @@ If a threat from the model has no corresponding code change, that is a finding â
 
 ### 6. Regenerate `docs/sdl/INDEX.md`
 
-Walk every cycle folder under `docs/sdl/`, read its `.sdl-meta.yml`, and emit a markdown table:
+Run from the repo root:
 
-| Slug | Branch | PR | Status | Created | Summary |
+```
+python3 ~/.sdl-governance/lib/gen_index.py
+```
 
-The "Summary" column comes from the first line of the cycle's `01-requirements.md` "Summary" section.
+(or the cloned location). Do not hand-edit the table â€” it is generated from each cycle's `.sdl-meta.yml` and the first sentence of its `01-requirements.md` Summary (or the `dep-update.md` Updates table for dependency-update cycles).
 
 ### 7. Report
 

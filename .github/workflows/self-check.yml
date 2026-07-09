@@ -19,7 +19,9 @@ jobs:
           python -c "import ast; ast.parse(open('lib/validate.py').read())"
           python lib/validate.py --help
       - name: Unit tests
-        run: python -m unittest -v lib.test_validate lib.test_check_pins
+        run: python -m unittest -v lib.test_validate lib.test_check_pins lib.test_new_cycle lib.test_gen_index
+      - name: INDEX.md is current
+        run: python lib/gen_index.py --check
 
   pins:
     runs-on: ubuntu-latest
@@ -67,6 +69,8 @@ jobs:
             scripts/sync-to-repo.sh \
             lib/validate.py \
             lib/check_pins.py \
+            lib/new_cycle.py \
+            lib/gen_index.py \
             docs/dependency-updates.md \
             docs/62443-mapping.md \
             docs/developer-guide.md \
