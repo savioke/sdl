@@ -49,12 +49,19 @@ fi
 
 # 4. Register the Claude Code marketplace and install the plugin.
 if command -v claude >/dev/null 2>&1; then
+  # Drop the legacy registration from before the savioke -> relay rename.
+  if claude plugin marketplace list 2>/dev/null | grep -q '^savioke\b'; then
+    log "Removing legacy 'savioke' marketplace registration"
+    claude plugin uninstall sdl@savioke 2>/dev/null || true
+    claude plugin marketplace remove savioke || \
+      warn "Could not remove legacy 'savioke' marketplace; remove it manually."
+  fi
   log "Registering Claude Code marketplace"
   claude plugin marketplace add "$INSTALL_DIR" || \
     warn "Marketplace registration failed (may already be registered)."
   log "Installing sdl plugin"
-  claude plugin install sdl@savioke || \
-    warn "Plugin install failed; run 'claude plugin install sdl@savioke' manually."
+  claude plugin install sdl@relay || \
+    warn "Plugin install failed; run 'claude plugin install sdl@relay' manually."
 else
   warn "claude CLI not found. Skipping plugin install. Install Claude Code and re-run."
 fi
@@ -64,7 +71,7 @@ cat <<EOF
 Done.
 
   Install dir:      $INSTALL_DIR
-  Claude plugin:    sdl@savioke (managed via 'claude plugin')
+  Claude plugin:    sdl@relay (managed via 'claude plugin')
   Copilot skills:   $COPILOT_SKILLS_DIR/$LINK_NAME
 
 To update later:
@@ -72,7 +79,7 @@ To update later:
   # Copilot picks up the new skills immediately (they are symlinked).
   # Claude Code does NOT — the plugin marketplace is a local clone and does
   # not auto-refresh. After pulling, also run:
-  #   /plugin marketplace update savioke   (then reload when prompted)
+  #   /plugin marketplace update relay   (then reload when prompted)
 
 To enable SDL on a project repo:
   $INSTALL_DIR/scripts/sync-to-repo.sh /path/to/repo

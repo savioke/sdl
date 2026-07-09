@@ -1,6 +1,6 @@
 # SDL — Admin Setup
 
-For whoever maintains the SDL governance infrastructure for savioke. Covers first-time org setup, releasing changes, and onboarding repos and developers.
+For whoever maintains the SDL governance infrastructure for Relay (GitHub org: `savioke`, the pre-rename company name). Covers first-time org setup, releasing changes, and onboarding repos and developers.
 
 This document is for administrators. Day-to-day developers should read `developer-guide.md`.
 
