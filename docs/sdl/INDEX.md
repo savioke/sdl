@@ -9,4 +9,4 @@
 | 2026-06-11-sdl-report-viewer | sdl-report-viewer | 10 | merged | 2026-06-11 | Lightweight localhost HTML viewer for a repo's docs/sdl cycles; viewer lives in the governance install, nothing added to consumer repos. |
 | 2026-07-09-actions-3e1200532a | dependabot/github_actions/actions-3e1200532a | 11 | merged | 2026-07-09 | Dependabot bump: actions/checkout v6.0.3→v7.0.0, actions/setup-python v6.2.0→v6.3.0; retroactive docs, SHAs verified upstream. |
 | 2026-07-09-dep-update-tier | dep-update-tier | 12 | merged | 2026-07-09 | Tiered dependency-update process: routine-tier dep-update.md records with a fail-closed diff classifier, check_pins SHA↔tag verification, escalation to full cycles for majors. |
-| 2026-07-09-marketplace-rename | marketplace-rename | 13 | review | 2026-07-09 | Rename the Claude Code plugin marketplace from `savioke` to `relay` following the company rename. |
+| 2026-07-09-marketplace-rename | marketplace-rename | 13 | review | 2026-07-09 | Rename the Claude Code plugin marketplace from `savioke` to `relay-sdl` following the company rename. |

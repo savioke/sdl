@@ -1,8 +1,8 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "relay",
-  "displayName": "Relay",
-  "description": "Relay internal Claude Code plugins. Currently hosts the SDL governance plugin.",
+  "name": "relay-sdl",
+  "displayName": "Relay SDL",
+  "description": "Relay's SDL governance plugin for Claude Code.",
   "owner": {
     "name": "relay"
   },

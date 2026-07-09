@@ -13,17 +13,17 @@
 
 ### New install scripts (build, CI, and supply chain)
 
-- **Finding:** `scripts/install.sh` modified — verified string-only per hunk: install target `sdl@relay` at `scripts/install.sh:56-57`, printed footer at `:67`, printed update command at `:75`. No new network fetch, integrity-relevant step, privileged operation, or control flow. baseline:B3 disposition unchanged. An interim commit (b2fc1a4) added `plugin uninstall`/`marketplace remove` calls; the final diff reverts them — confirmed absent from the reviewed tree. `shellcheck` and `bash -n` pass.
+- **Finding:** `scripts/install.sh` modified — verified string-only per hunk: install target `sdl@relay-sdl` at `scripts/install.sh:56-57`, printed footer at `:67`, printed update command at `:75`. No new network fetch, integrity-relevant step, privileged operation, or control flow. baseline:B3 disposition unchanged. An interim commit (b2fc1a4) added `plugin uninstall`/`marketplace remove` calls; the final diff reverts them — confirmed absent from the reviewed tree. `shellcheck` and `bash -n` pass.
 - **References:** `scripts/install.sh:56-57,67,75`
 
 ### Plugin/marketplace manifest integrity (supply chain)
 
-- **Finding:** `.claude-plugin/marketplace.json` changes confined to identity fields (`name`, `displayName`, `owner.name`, `description`). The plugin entry's `source: ./plugins/sdl`, name, and version are untouched, so the installed artifact is unchanged. `relay` is valid (kebab-case) and not an Anthropic-reserved marketplace name. JSON validates.
+- **Finding:** `.claude-plugin/marketplace.json` changes confined to identity fields (`name`, `displayName`, `owner.name`, `description`). The plugin entry's `source: ./plugins/sdl`, name, and version are untouched, so the installed artifact is unchanged. `relay-sdl` is valid (kebab-case) and not an Anthropic-reserved marketplace name. JSON validates.
 - **References:** `.claude-plugin/marketplace.json:3-8`
 
 ### Documentation accuracy of the security-relevant procedure
 
-- **Finding:** the documented update command matches the renamed manifest everywhere it appears: `docs/developer-guide.md:28`, `Plan.md:132`, `scripts/install.sh:75` all say `/plugin marketplace update relay`. Remaining `savioke` references verified to be GitHub org/repo paths only (clone URLs, reusable-workflow ref, `check_pins.py --exempt`), which are correct as-is.
+- **Finding:** the documented update command matches the renamed manifest everywhere it appears: `docs/developer-guide.md:28`, `Plan.md:132`, `scripts/install.sh:75` all say `/plugin marketplace update relay-sdl`. Remaining `savioke` references verified to be GitHub org/repo paths only (clone URLs, reusable-workflow ref, `check_pins.py --exempt`), which are correct as-is.
 - **References:** `docs/developer-guide.md:28`, `Plan.md:132`, `docs/admin-setup.md:3`
 
 **Not applicable (no code in these areas):** input handling, data and persistence, network and transport, authentication and authorization, cryptography, secrets, logging and observability, concurrency and resource use, dependencies, frontend, native.

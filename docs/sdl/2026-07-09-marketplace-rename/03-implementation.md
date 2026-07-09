@@ -4,13 +4,13 @@
 
 ## Summary of changes
 
-String-only rename of the plugin marketplace identity from `savioke` to `relay`: the four identity/description fields in `.claude-plugin/marketplace.json`, the install target and printed instructions in `scripts/install.sh` (`sdl@savioke` → `sdl@relay`, update command), the update command in `docs/developer-guide.md` and `Plan.md`, and the company name in `docs/admin-setup.md`'s intro. Net diff: 11 insertions, 11 deletions across 5 files; no logic, control flow, or executable behavior changed. An interim version of the branch added legacy-marketplace auto-removal (`plugin uninstall` / `marketplace remove`) to `install.sh`; it was reverted per the scope decision in `01-requirements.md`.
+String-only rename of the plugin marketplace identity from `savioke` to `relay-sdl`: the four identity/description fields in `.claude-plugin/marketplace.json`, the install target and printed instructions in `scripts/install.sh` (`sdl@savioke` → `sdl@relay-sdl`, update command), the update command in `docs/developer-guide.md` and `Plan.md`, and the company name in `docs/admin-setup.md`'s intro. Net diff: 11 insertions, 11 deletions across 5 files; no logic, control flow, or executable behavior changed. An interim version of the branch added legacy-marketplace auto-removal (`plugin uninstall` / `marketplace remove`) to `install.sh`; it was reverted per the scope decision in `01-requirements.md`.
 
 ## Mitigations implemented <!-- SI-1 -->
 
 | Threat | Mitigation | Location | Commit |
 |--------|------------|----------|--------|
-| T1 | Procedural, not code: sole existing user migrates his two installs manually (uninstall `sdl@savioke`, remove `savioke` marketplace, re-run `install.sh`). Defense in depth in code: the documented update command now names `relay`, so a half-migrated install fails at the documented step instead of drifting. | `scripts/install.sh:56,67,75`; `docs/developer-guide.md:28` | b2fc1a4 (+ pending revert commit for the auto-removal block) |
+| T1 | Procedural, not code: sole existing user migrates his two installs manually (uninstall `sdl@savioke`, remove `savioke` marketplace, re-run `install.sh`). Defense in depth in code: the documented update command now names `relay-sdl`, so a half-migrated install fails at the documented step instead of drifting. | `scripts/install.sh:56,67,75`; `docs/developer-guide.md:28` | b2fc1a4 (+ pending revert commit for the auto-removal block) |
 
 ## Secure coding practices applied <!-- SI-2 -->
 

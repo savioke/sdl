@@ -53,8 +53,8 @@ if command -v claude >/dev/null 2>&1; then
   claude plugin marketplace add "$INSTALL_DIR" || \
     warn "Marketplace registration failed (may already be registered)."
   log "Installing sdl plugin"
-  claude plugin install sdl@relay || \
-    warn "Plugin install failed; run 'claude plugin install sdl@relay' manually."
+  claude plugin install sdl@relay-sdl || \
+    warn "Plugin install failed; run 'claude plugin install sdl@relay-sdl' manually."
 else
   warn "claude CLI not found. Skipping plugin install. Install Claude Code and re-run."
 fi
@@ -64,7 +64,7 @@ cat <<EOF
 Done.
 
   Install dir:      $INSTALL_DIR
-  Claude plugin:    sdl@relay (managed via 'claude plugin')
+  Claude plugin:    sdl@relay-sdl (managed via 'claude plugin')
   Copilot skills:   $COPILOT_SKILLS_DIR/$LINK_NAME
 
 To update later:
@@ -72,7 +72,7 @@ To update later:
   # Copilot picks up the new skills immediately (they are symlinked).
   # Claude Code does NOT — the plugin marketplace is a local clone and does
   # not auto-refresh. After pulling, also run:
-  #   /plugin marketplace update relay   (then reload when prompted)
+  #   /plugin marketplace update relay-sdl   (then reload when prompted)
 
 To enable SDL on a project repo:
   $INSTALL_DIR/scripts/sync-to-repo.sh /path/to/repo
