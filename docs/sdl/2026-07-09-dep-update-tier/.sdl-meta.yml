@@ -4,8 +4,8 @@
 slug: 2026-07-09-dep-update-tier
 branch: dep-update-tier
 created: 2026-07-09
-pr: null
-status: review
+pr: 12
+status: merged
 
 related_cycles: [2026-06-10-pin-actions-sha, 2026-07-09-actions-3e1200532a]
 

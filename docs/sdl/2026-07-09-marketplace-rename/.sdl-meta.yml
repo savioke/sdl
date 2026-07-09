@@ -1,0 +1,8 @@
+slug: 2026-07-09-marketplace-rename
+branch: marketplace-rename
+created: 2026-07-09
+pr: 13
+status: review
+related_cycles:
+  - 2026-06-11-fix-update-instructions
+carry_forward: []
