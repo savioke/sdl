@@ -72,7 +72,7 @@ DEP_RECORD = "dep-update.md"
 PIN_LINE_RE = re.compile(
     r"^\s*(?:-\s+)?uses:\s*"
     r"(?P<action>[\w.-]+/[\w.-]+)(?:/[\w./-]+)?"
-    r"@(?P<sha>[0-9a-f]{40})"
+    r"@(?P<sha>[0-9a-fA-F]{40})"
     r"\s*(?:#\s*v?(?P<major>\d+)(?:[.\w-]*))?\s*$"
 )
 
