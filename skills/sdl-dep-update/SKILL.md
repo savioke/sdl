@@ -49,7 +49,7 @@ you find a real conflict.
 Scaffold the cycle folder:
 
 ```
-python3 <governance>/lib/new_cycle.py --class dependency-update
+python3 ~/.sdl-governance/lib/new_cycle.py --class dependency-update
 ```
 
 It creates `docs/sdl/YYYY-MM-DD-<slug>/` with `.sdl-meta.yml` (including
