@@ -6,6 +6,9 @@ branch:                     # original branch name, pre-normalization
 created:                    # YYYY-MM-DD, set on cycle creation
 pr:                         # GitHub PR number, filled when PR opens
 status: in-progress         # in-progress | review | merged | abandoned
+                            # class: dependency-update — routine-tier cycle,
+                            # requires dep-update.md instead of the 01–04 set
+                            # (docs/dependency-updates.md); omit for full cycles
 
 related_cycles: []          # prior cycle slugs this builds on or supersedes
 

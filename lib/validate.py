@@ -52,6 +52,125 @@ def is_skill(p: Path) -> bool:
     return p.name == "SKILL.md" or ("skills" in p.parts and p.suffix == ".md")
 
 
+# Dependency-update cycle class (docs/dependency-updates.md). Exact filenames
+# only — fail closed on anything not positively identified as a manifest or
+# lockfile. Manifest *content* can still carry executable config (npm scripts,
+# resolved URLs); that residual is accepted at the routine tier and owned by
+# policy, not the classifier (cycle 2026-07-09-dep-update-tier, T3).
+DEP_MANIFEST_NAMES = {
+    "package.json", "package-lock.json", "npm-shrinkwrap.json", "yarn.lock",
+    "pnpm-lock.yaml", "go.mod", "go.sum", "Cargo.toml", "Cargo.lock",
+    "Gemfile", "Gemfile.lock", "requirements.txt", "constraints.txt",
+    "Pipfile", "Pipfile.lock", "poetry.lock", "uv.lock", "pyproject.toml",
+    "composer.json", "composer.lock", ".github/dependabot.yml",
+}
+
+DEP_RECORD = "dep-update.md"
+
+# A pinned uses: line — 40-hex SHA required, version comment optional at parse
+# time (its absence fails the routine tier separately, with a clearer message).
+PIN_LINE_RE = re.compile(
+    r"^\s*(?:-\s+)?uses:\s*"
+    r"(?P<action>[\w.-]+/[\w.-]+)(?:/[\w./-]+)?"
+    r"@(?P<sha>[0-9a-f]{40})"
+    r"\s*(?:#\s*v?(?P<major>\d+)(?:[.\w-]*))?\s*$"
+)
+
+
+def is_dep_manifest(p: Path) -> bool:
+    return p.name in DEP_MANIFEST_NAMES or p.as_posix() in DEP_MANIFEST_NAMES
+
+
+def pin_only_workflow_diff(base: str, path: Path) -> Result:
+    """Accept a workflow diff only if every changed line is a SHA-pinned uses:
+    line, every added action has a removed counterpart (same owner/repo — a new
+    or swapped action is not a routine update), and majors match per action."""
+    diff = run(["git", "diff", f"{base}...HEAD", "--", path.as_posix()])
+    removed: dict[str, set[str]] = {}
+    added: dict[str, set[str]] = {}
+    for line in diff.splitlines():
+        # File headers are exactly "--- a/..." / "+++ b/..."; content lines are
+        # "-"/"+" followed directly by file text, so the space disambiguates.
+        if line.startswith(("--- ", "+++ ")):
+            continue
+        if not line.startswith(("-", "+")):
+            continue
+        m = PIN_LINE_RE.match(line[1:])
+        if not m:
+            return Result(False, f"{path}: non-pin change: {line[1:].strip()[:80]!r}")
+        if m.group("major") is None:
+            return Result(False, f"{path}: pin for {m.group('action')} lacks a parseable version comment")
+        bucket = removed if line.startswith("-") else added
+        bucket.setdefault(m.group("action"), set()).add(m.group("major"))
+    for action, majors in added.items():
+        if action not in removed:
+            return Result(False, f"{path}: new action {action} — not a routine update")
+        if majors != removed[action]:
+            return Result(False, f"{path}: major version bump for {action} — requires a full cycle")
+    for action in removed:
+        if action not in added:
+            return Result(False, f"{path}: action {action} removed — CI behavior change, not a routine update")
+    return Result(True, f"{path}: pin-only workflow change")
+
+
+def check_dep_class_diff(base: str, files: list[Path]) -> Result:
+    """The whole diff must be dependency-shaped for the routine tier to apply."""
+    for f in files:
+        if f.as_posix().startswith("docs/sdl/"):
+            continue
+        if is_dep_manifest(f):
+            continue
+        if is_workflow(f):
+            r = pin_only_workflow_diff(base, f)
+            if not r:
+                return r
+            continue
+        return Result(False, f"{f} is neither a dependency manifest nor a workflow — full cycle required")
+    return Result(True, "diff is dependency-only")
+
+
+def parse_version_major(version: str) -> str | None:
+    m = re.match(r"v?(\d+)", version.strip())
+    return m.group(1) if m else None
+
+
+def check_dep_record(cycle: Path, templates: Path | None) -> Result:
+    """dep-update.md must exist, have content, and declare only non-major bumps."""
+    record = cycle / DEP_RECORD
+    if not record.is_file():
+        return Result(False, f"{cycle.name}: missing {DEP_RECORD}")
+    tmpl = templates / DEP_RECORD if templates else None
+    if not is_nonstub(record, tmpl):
+        return Result(False, f"{cycle.name}: {DEP_RECORD} is a stub")
+    rows = []
+    for line in record.read_text(encoding="utf-8", errors="replace").splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) < 3 or not line.strip().startswith("|"):
+            continue
+        if cells[0].lower() in ("package", "") or set(cells[0]) <= {"-", " ", ":"}:
+            continue
+        rows.append(cells)
+    if not rows:
+        return Result(False, f"{cycle.name}: {DEP_RECORD} declares no updates")
+    for cells in rows:
+        name, old, new = cells[0], cells[1], cells[2]
+        old_major, new_major = parse_version_major(old), parse_version_major(new)
+        if old_major is None or new_major is None:
+            return Result(False, f"{cycle.name}: {DEP_RECORD}: unparseable versions for {name}")
+        if old_major != new_major:
+            return Result(False, f"{cycle.name}: {DEP_RECORD}: major bump declared for {name} — requires a full cycle")
+    return Result(True, f"{cycle.name}: {DEP_RECORD} declares {len(rows)} non-major update(s)")
+
+
+def cycle_class(cycle: Path) -> str | None:
+    meta = cycle / ".sdl-meta.yml"
+    if not meta.is_file():
+        return None
+    m = re.search(r"^class:\s*(\S+)\s*$",
+                  meta.read_text(encoding="utf-8", errors="replace"), re.MULTILINE)
+    return m.group(1) if m else None
+
+
 @dataclass
 class Result:
     ok: bool
@@ -208,10 +327,17 @@ def main() -> int:
 
     cycle = find_cycle_for_branch(repo, branch)
     if cycle is not None:
-        results.append(check_files_present(cycle))
         results.append(check_meta_branch(cycle, branch))
-        if all((cycle / f).is_file() for f in REQUIRED_FILES):
-            results.append(check_nonstub(cycle, templates))
+        cls = cycle_class(cycle)
+        if cls == "dependency-update":
+            results.append(check_dep_class_diff(args.base, files))
+            results.append(check_dep_record(cycle, templates))
+        elif cls is not None:
+            results.append(Result(False, f"{cycle.name}: unknown cycle class {cls!r}"))
+        else:
+            results.append(check_files_present(cycle))
+            if all((cycle / f).is_file() for f in REQUIRED_FILES):
+                results.append(check_nonstub(cycle, templates))
 
     failed = [r for r in results if not r]
     for r in results:
@@ -222,6 +348,13 @@ def main() -> int:
         warning = baseline_warning(repo)
         if warning:
             print(f"[warn] {warning}")
+
+    # Warn-first: manifest/lockfile-only diffs pass the gate today (not "code"),
+    # but at fleet scale they should carry a dependency-update record too.
+    # Becomes a hard check in a future major version (see docs/dependency-updates.md).
+    if cycle is None and not code_changed(files) and any(is_dep_manifest(f) for f in files):
+        print("[warn] dependency manifests changed with no dependency-update cycle — "
+              "see docs/dependency-updates.md")
 
     if failed:
         print(f"\n{len(failed)} check(s) failed.", file=sys.stderr)

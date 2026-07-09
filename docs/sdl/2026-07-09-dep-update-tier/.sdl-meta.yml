@@ -1,12 +1,12 @@
 # SDL cycle metadata. Maintained by sdl-* skills; humans rarely edit.
 # Practice refs: SM-1 (development process), SM-5 (change management).
 
-slug: 2026-07-09-actions-3e1200532a
-branch: dependabot/github_actions/actions-3e1200532a
+slug: 2026-07-09-dep-update-tier
+branch: dep-update-tier
 created: 2026-07-09
-pr: 11
-status: merged
+pr: null
+status: review
 
-related_cycles: [2026-06-10-pin-actions-sha]
+related_cycles: [2026-06-10-pin-actions-sha, 2026-07-09-actions-3e1200532a]
 
 carry_forward: []
