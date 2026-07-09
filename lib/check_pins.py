@@ -99,7 +99,7 @@ def verify(pins: list[Pin], token: str | None) -> list[str]:
         except (urllib.error.URLError, TimeoutError, KeyError, ValueError) as e:
             errors.append(f"{where}: {p.action}@{p.version}: tag lookup failed ({e.__class__.__name__})")
             continue
-        if cache[key] != p.ref:
+        if cache[key].lower() != p.ref.lower():
             errors.append(
                 f"{where}: {p.action} pinned to {p.ref} but tag {p.version} "
                 f"resolves to {cache[key]}"
