@@ -46,15 +46,20 @@ you find a real conflict.
 
 ### 4. Write the record
 
-Create `docs/sdl/YYYY-MM-DD-<branch-slug>/` (slug rules per `sdl-spec`) with:
+Scaffold the cycle folder:
 
-- `.sdl-meta.yml` — standard fields plus `class: dependency-update`.
-- `dep-update.md` — from `templates/docs-sdl/dep-update.md`: the updates table
-  (exact old/new versions), checks you actually performed, notes.
+```
+python3 <governance>/lib/new_cycle.py --class dependency-update
+```
 
-Add the cycle to `docs/sdl/INDEX.md`. Run the validator
-(`python3 <governance>/lib/validate.py --base origin/main`) and show the user
-the result.
+It creates `docs/sdl/YYYY-MM-DD-<slug>/` with `.sdl-meta.yml` (including
+`class: dependency-update`) and a template `dep-update.md`. Fill the record:
+the updates table (exact old/new versions), checks you actually performed,
+notes.
+
+Regenerate the index (`python3 <governance>/lib/gen_index.py`), run the
+validator (`python3 <governance>/lib/validate.py --base origin/main`), and
+show the user the result.
 
 ## Tone
 

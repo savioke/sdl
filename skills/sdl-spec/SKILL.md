@@ -10,8 +10,14 @@ You scaffold the SDL cycle for a new feature and run a short, focused requiremen
 ## Preconditions
 
 1. The repo has a `docs/sdl/` folder. If not, this skill does not apply — exit silently.
-2. The user is at the start of meaningful work, not mid-implementation. If a cycle for the current branch already exists (`docs/sdl/*/.sdl-meta.yml` with matching `branch:`), do not re-scaffold — tell the user the existing cycle and offer to update `01-requirements.md` instead.
+2. If a cycle for the current branch already exists (`docs/sdl/*/.sdl-meta.yml` with matching `branch:`), do not re-scaffold — tell the user the existing cycle and offer to update `01-requirements.md` instead.
 3. If `docs/sdl/baseline.md` is missing or a stub, suggest running `sdl-baseline` first — it records the standing exposure model and risks so cycles document only their delta. Don't block; proceed if the user prefers.
+
+## Fast path: small, already-implemented changes
+
+When the change is already implemented (or nearly) and small — roughly a day of work or less, no new trust boundary, no new external input — don't run the cycle as three separate passes. In one pass: scaffold (step 1), skip the interview (every required topic is answerable from the diff and the conversation), write `01-requirements.md`, then author `02-threat-model.md` per `sdl-threat-model` and run `sdl-review`, all in the same session. Show the user the finished artifacts to correct instead of interviewing them first.
+
+This compresses orchestration, not evidence: the four artifacts meet the same standard and the validator still gates. If the diff turns out to cross a new trust boundary or introduce external input, drop back to the interview — that judgment call is the one step you cannot skip.
 
 ## Inputs
 
@@ -24,29 +30,17 @@ You scaffold the SDL cycle for a new feature and run a short, focused requiremen
 
 ## What to do
 
-### 1. Generate the slug and create the folder
+### 1. Scaffold with the tool
 
-- **Branch slug normalization.** Take the branch name, strip everything before the last `/`, lowercase, replace underscores with hyphens, drop any non-`[a-z0-9-]` characters, truncate to 40 chars (cut on a hyphen boundary if possible).
-- **Folder name.** `docs/sdl/YYYY-MM-DD-<slug>/` using today's date.
-- **Refuse to overwrite.** If the folder exists, stop and tell the user.
+Run from the repo root:
 
-Copy all five template files from `templates/docs-sdl/` into the new folder. Do not modify them yet beyond `.sdl-meta.yml`.
-
-### 2. Populate `.sdl-meta.yml`
-
-```yaml
-slug: <YYYY-MM-DD-slug>
-branch: <original branch name, pre-normalization>
-created: <YYYY-MM-DD>
-pr: null
-status: in-progress
-related_cycles: []
-carry_forward: []
+```
+python3 ~/.sdl-governance/lib/new_cycle.py
 ```
 
-`related_cycles` and `carry_forward` get filled in step 4.
+(or the cloned location). It normalizes the branch name to a slug, creates `docs/sdl/YYYY-MM-DD-<slug>/` from the templates, and writes `.sdl-meta.yml`; it refuses to overwrite an existing folder or re-scaffold a branch that already has a cycle. Do not hand-copy templates or hand-write the meta file — the tool exists so this step is deterministic. `related_cycles` and `carry_forward` get filled in step 3.
 
-### 3. Run the requirements interview
+### 2. Run the requirements interview
 
 Ask only what you cannot infer. Be concise — one short message with the questions, not a long preamble. If the user has already told you most of it in the conversation, fill what you know and ask only for the gaps.
 
@@ -64,7 +58,7 @@ Required topics, in this order:
 
 Don't drown the user. If you can answer five of seven from context, ask the remaining two.
 
-### 4. Detect related prior cycles and carry-forward residual risks
+### 3. Detect related prior cycles and carry-forward residual risks
 
 Scan `docs/sdl/*/01-requirements.md` and `docs/sdl/*/.sdl-meta.yml` for keyword overlap with this cycle's summary. For matches, list them in `related_cycles` (slug only) and reference them in `01-requirements.md` "Related prior cycles".
 
@@ -76,13 +70,13 @@ Then scan `docs/sdl/*/04-verification.md` files of related cycles for residual r
 
 Don't invent connections. If there are no obvious related cycles, leave the section empty.
 
-### 5. Write `01-requirements.md`
+### 4. Write `01-requirements.md`
 
 Fill the template sections from the interview answers. Keep each section tight — auditors want completeness, not volume.
 
 Leave `02-threat-model.md`, `03-implementation.md`, and `04-verification.md` as templates. They get filled by `sdl-threat-model` and `sdl-review` later.
 
-### 6. Report
+### 5. Report
 
 Tell the user:
 
