@@ -35,7 +35,7 @@ USES_RE = re.compile(
     r"@(?P<ref>[^\s#]+)"
     r"\s*(?:#\s*(?P<comment>.*\S))?\s*$"
 )
-SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+SHA_RE = re.compile(r"^[0-9a-f]{40}$", re.IGNORECASE)
 VERSION_RE = re.compile(r"^v?\d+(\.\d+)*$")
 
 
