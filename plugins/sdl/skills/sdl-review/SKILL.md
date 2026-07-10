@@ -84,13 +84,13 @@ If a threat from the model has no corresponding code change, that is a finding �
 
 ### 6. Regenerate `docs/sdl/INDEX.md`
 
-Run from the repo root:
+Run from the repo root (`<plugin-root>` is the directory two levels above this SKILL.md):
 
 ```
-python3 ~/.sdl-governance/lib/gen_index.py
+python3 <plugin-root>/lib/gen_index.py
 ```
 
-(or the cloned location). Do not hand-edit the table — it is generated from each cycle's `.sdl-meta.yml` and the first sentence of its `01-requirements.md` Summary (or the `dep-update.md` Updates table for dependency-update cycles).
+Do not hand-edit the table — it is generated from each cycle's `.sdl-meta.yml` and the first sentence of its `01-requirements.md` Summary (or the `dep-update.md` Updates table for dependency-update cycles).
 
 ### 7. Report
 

@@ -16,12 +16,13 @@ jobs:
           python-version: '3.x'
       - name: Validator imports and runs
         run: |
-          python -c "import ast; ast.parse(open('lib/validate.py').read())"
-          python lib/validate.py --help
+          python -c "import ast; ast.parse(open('plugins/sdl/lib/validate.py').read())"
+          python plugins/sdl/lib/validate.py --help
       - name: Unit tests
         run: python -m unittest -v lib.test_validate lib.test_check_pins lib.test_new_cycle lib.test_gen_index
+        working-directory: plugins/sdl
       - name: INDEX.md is current
-        run: python lib/gen_index.py --check
+        run: python plugins/sdl/lib/gen_index.py --check
 
   pins:
     runs-on: ubuntu-latest
@@ -30,7 +31,7 @@ jobs:
       - name: Action pins match upstream tags
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 lib/check_pins.py --exempt savioke/sdl
+        run: python3 plugins/sdl/lib/check_pins.py --exempt savioke/sdl
 
   shell:
     runs-on: ubuntu-latest
@@ -49,28 +50,27 @@ jobs:
         run: |
           set -e
           for f in \
-            .claude-plugin/marketplace.json \
             plugins/sdl/.claude-plugin/plugin.json \
-            skills/sdl-spec/SKILL.md \
-            skills/sdl-threat-model/SKILL.md \
-            skills/sdl-review/SKILL.md \
-            skills/sdl-review/security-checks.md \
-            skills/sdl-baseline/SKILL.md \
-            skills/sdl-dep-update/SKILL.md \
-            templates/baseline.md \
-            templates/docs-sdl/.sdl-meta.yml \
-            templates/docs-sdl/01-requirements.md \
-            templates/docs-sdl/02-threat-model.md \
-            templates/docs-sdl/03-implementation.md \
-            templates/docs-sdl/04-verification.md \
-            templates/docs-sdl/dep-update.md \
+            plugins/sdl/skills/sdl-spec/SKILL.md \
+            plugins/sdl/skills/sdl-threat-model/SKILL.md \
+            plugins/sdl/skills/sdl-review/SKILL.md \
+            plugins/sdl/skills/sdl-review/security-checks.md \
+            plugins/sdl/skills/sdl-baseline/SKILL.md \
+            plugins/sdl/skills/sdl-dep-update/SKILL.md \
+            plugins/sdl/templates/baseline.md \
+            plugins/sdl/templates/docs-sdl/.sdl-meta.yml \
+            plugins/sdl/templates/docs-sdl/01-requirements.md \
+            plugins/sdl/templates/docs-sdl/02-threat-model.md \
+            plugins/sdl/templates/docs-sdl/03-implementation.md \
+            plugins/sdl/templates/docs-sdl/04-verification.md \
+            plugins/sdl/templates/docs-sdl/dep-update.md \
             .github/workflows/sdl-validate.yml \
             scripts/install.sh \
             scripts/sync-to-repo.sh \
-            lib/validate.py \
-            lib/check_pins.py \
-            lib/new_cycle.py \
-            lib/gen_index.py \
+            plugins/sdl/lib/validate.py \
+            plugins/sdl/lib/check_pins.py \
+            plugins/sdl/lib/new_cycle.py \
+            plugins/sdl/lib/gen_index.py \
             docs/dependency-updates.md \
             docs/62443-mapping.md \
             docs/developer-guide.md \
@@ -81,5 +81,4 @@ jobs:
           echo "all required files present"
       - name: JSON parses
         run: |
-          python -c "import json; json.load(open('.claude-plugin/marketplace.json'))"
           python -c "import json; json.load(open('plugins/sdl/.claude-plugin/plugin.json'))"

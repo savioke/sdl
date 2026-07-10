@@ -49,7 +49,7 @@ baseline="$repo/docs/sdl/baseline.md"
 if [[ -e "$baseline" ]]; then
   warn "$baseline already exists. Leaving as-is."
 else
-  cp "$INSTALL_DIR/templates/baseline.md" "$baseline"
+  cp "$INSTALL_DIR/plugins/sdl/templates/baseline.md" "$baseline"
   log "Wrote $baseline (stub — fill it with the sdl-baseline skill)"
 fi
 

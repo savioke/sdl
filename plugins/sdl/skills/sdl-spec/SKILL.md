@@ -23,7 +23,7 @@ This compresses orchestration, not evidence: the four artifacts meet the same st
 
 - Current git branch name.
 - Today's date.
-- Templates directory: `~/.sdl-governance/templates/docs-sdl/` (or the cloned location).
+- Templates directory: `<plugin-root>/templates/docs-sdl/`, where `<plugin-root>` is the directory two levels above this SKILL.md.
 - `docs/sdl/baseline.md` if present — the repo's standing exposure model, trust boundaries, assets, and standing risks. Pull these from the baseline rather than re-asking the user.
 - Prior cycle folders under `docs/sdl/` for cross-referencing and carry-forward detection.
 - Whatever the user has told you about the feature in conversation.
@@ -32,13 +32,13 @@ This compresses orchestration, not evidence: the four artifacts meet the same st
 
 ### 1. Scaffold with the tool
 
-Run from the repo root:
+Run from the repo root (`<plugin-root>` is the directory two levels above this SKILL.md):
 
 ```
-python3 ~/.sdl-governance/lib/new_cycle.py
+python3 <plugin-root>/lib/new_cycle.py
 ```
 
-(or the cloned location). It normalizes the branch name to a slug, creates `docs/sdl/YYYY-MM-DD-<slug>/` from the templates, and writes `.sdl-meta.yml`; it refuses to overwrite an existing folder or re-scaffold a branch that already has a cycle. Do not hand-copy templates or hand-write the meta file — the tool exists so this step is deterministic. `related_cycles` and `carry_forward` get filled in step 3.
+It normalizes the branch name to a slug, creates `docs/sdl/YYYY-MM-DD-<slug>/` from the templates, and writes `.sdl-meta.yml`; it refuses to overwrite an existing folder or re-scaffold a branch that already has a cycle. Do not hand-copy templates or hand-write the meta file — the tool exists so this step is deterministic. `related_cycles` and `carry_forward` get filled in step 3.
 
 ### 2. Run the requirements interview
 

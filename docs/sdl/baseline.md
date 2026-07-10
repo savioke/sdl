@@ -6,12 +6,12 @@ Repo-level security baseline for `savioke/sdl`, the SDL governance tooling itsel
 
 SDL governance tooling for savioke. Public GitHub repo, no runtime service. Components:
 
-- `lib/validate.py` — the CI gate validator. Python, standard library only.
+- `plugins/sdl/lib/validate.py` — the CI gate validator. Python, standard library only.
 - `.github/workflows/sdl-validate.yml` — reusable workflow consumers call via `workflow_call`.
-- `skills/` — agent skill definitions (`sdl-spec`, `sdl-threat-model`, `sdl-review`, `sdl-baseline`) executed by Claude Code / Copilot.
-- `templates/` — markdown artifact stubs copied into each cycle.
+- `plugins/sdl/skills/` — agent skill definitions (`sdl-spec`, `sdl-threat-model`, `sdl-review`, `sdl-baseline`, `sdl-dep-update`) executed by Claude Code / Copilot.
+- `plugins/sdl/templates/` — markdown artifact stubs copied into each cycle.
 - `scripts/install.sh` — symlinks skills onto a developer workstation; `scripts/sync-to-repo.sh` — onboards a consumer repo.
-- Distributed via the `@v1` tag (CI) and per-developer clones at `~/.sdl-governance` (skills via symlink).
+- Distributed via the `@v1` tag (CI); to Claude Code developers as the `sdl@relay` plugin, fetched from `main` via the `savioke/relay-plugin-marketplace` manifest; and to Copilot/other-agent developers via per-developer clones at `~/.sdl-governance` (skills via symlink).
 
 ## Deployment and exposure model
 
@@ -26,16 +26,18 @@ Single maintainer. PR review is the primary gate on changes, now augmented by th
 ## Trust boundaries and standing data flows
 
 - **This repo → consumer CI.** A change to `validate.py`, `sdl-validate.yml`, or a skill changes behavior in every consumer. Highest blast radius. Crossing point: the `@v1` tag consumers pin.
-- **This repo → developer workstation.** `install.sh` writes symlinks into `~/.claude/skills` and `~/.copilot/skills`; `sync-to-repo.sh` writes files into an arbitrary target repo.
+- **This repo → developer workstation (Claude Code).** The `sdl@relay` plugin is fetched from this repo's `main` as directed by the manifest in `savioke/relay-plugin-marketplace`. Crossing point: that manifest's `source` (url/path/ref) — an integrity asset that lives outside this repo and its SDL gate.
+- **This repo → developer workstation (scripts).** `install.sh` writes a symlink into `~/.copilot/skills`; `sync-to-repo.sh` writes files into an arbitrary target repo.
 - **Public read / public call.** Anyone can read the repo, and any repo can call the reusable workflow — by design, so external fork PRs can be validated without a shared secret.
 
 ## Assets and data classification
 
 No confidentiality assets: the repo is public and holds no secrets or customer data. The assets are **integrity** assets — compromising any executes attacker-controlled logic in consumer CI or on developer machines:
 
-- `lib/validate.py`, `.github/workflows/sdl-validate.yml`
-- skill instructions under `skills/`
+- `plugins/sdl/lib/validate.py`, `.github/workflows/sdl-validate.yml`
+- skill instructions under `plugins/sdl/skills/`
 - `scripts/install.sh`, `scripts/sync-to-repo.sh`
+- the marketplace manifest in `savioke/relay-plugin-marketplace` (external to this repo — see B7)
 
 `security-checks.md` and `docs/62443-mapping.md` disclose review categories and internal audit prose — low sensitivity, accepted public (see `docs/admin-setup.md`).
 
@@ -57,6 +59,7 @@ No confidentiality assets: the repo is public and holds no secrets or customer d
 | B4 | Publicly-callable reusable workflow: any GitHub repo can call `sdl-validate.yml@v1`. By design (fork-PR validation); it runs only against the caller's checkout with the caller's token and exposes no savioke secret. | low | accept | Revisit if any secret is ever introduced into the workflow. |
 | B5 | Moving `v1` tag: consumers pin `@v1` and accept moving tags, so a bad release reaches all of them at once; a force-moved tag also weakens reproducibility. | medium | accept | Single consumer today. Revisit (recommend pinning exact tags or immutable releases) as consumer count grows. |
 | B6 | Unpinned third-party actions: a compromised action tag would run in CI. Mitigated 2026-06-10 (cycle 2026-06-10-pin-actions-sha): `actions/*` pinned by commit SHA, Dependabot keeps them current. Reached consumer CI 2026-07-09 when `v1` advanced (cycle 2026-07-09-actions-3e1200532a). | medium | mitigated | Revisit if a new unpinned action is added. Tag moves lag merges — a mitigation in `sdl-validate.yml` is not live for consumers until `v1` advances. |
+| B7 | Marketplace manifest lives outside this repo's gates: `savioke/relay-plugin-marketplace` has no SDL cycle, CI, or validator, yet its `source` field decides what code `sdl@relay` delivers to Claude Code developer machines. A malicious or mistaken edit repoints the plugin at arbitrary code. | medium | accept | Org-member-only write access; the manifest is a single small reviewable file. Revisit (branch protection, SDL gating, or sha-pinning the plugin source) when the marketplace gains more plugins, maintainers, or users. |
 
 ## Maintenance
 

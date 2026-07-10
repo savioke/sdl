@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 # One-shot dev setup for SDL governance.
-# Clones (or updates) the canonical repo, registers the Claude Code marketplace
-# and installs the sdl plugin, and symlinks skills into Copilot's skills dir.
-# No global git hook config — hooks are opt-in per repo via sync-to-repo.sh.
+# Clones (or updates) the canonical repo, registers the Relay plugin
+# marketplace and installs the sdl plugin, and symlinks skills into Copilot's
+# skills dir. No global git hook config — hooks are opt-in per repo via
+# sync-to-repo.sh.
 
 set -euo pipefail
 
 REPO_URL="${SDL_REPO_URL:-git@github.com:savioke/sdl.git}"
 INSTALL_DIR="${SDL_INSTALL_DIR:-$HOME/.sdl-governance}"
+MARKETPLACE_URL="${RELAY_MARKETPLACE_URL:-https://github.com/savioke/relay-plugin-marketplace.git}"
 
 CLAUDE_SKILLS_DIR="$HOME/.claude/skills"
 COPILOT_SKILLS_DIR="$HOME/.copilot/skills"
@@ -35,26 +37,29 @@ if [[ -L "$legacy" && "$(readlink "$legacy")" == "$INSTALL_DIR/skills" ]]; then
 fi
 
 # 3. Symlink skills into Copilot's skills dir. Copilot has no marketplace path.
+SKILLS_DIR="$INSTALL_DIR/plugins/sdl/skills"
 mkdir -p "$COPILOT_SKILLS_DIR"
 target="$COPILOT_SKILLS_DIR/$LINK_NAME"
 if [[ -L "$target" ]]; then
   log "Refreshing Copilot symlink: $target"
-  ln -sfn "$INSTALL_DIR/skills" "$target"
+  ln -sfn "$SKILLS_DIR" "$target"
 elif [[ -e "$target" ]]; then
   warn "$target exists and is not a symlink. Skipping. Move it aside and re-run."
 else
-  log "Linking Copilot skills: $target -> $INSTALL_DIR/skills"
-  ln -s "$INSTALL_DIR/skills" "$target"
+  log "Linking Copilot skills: $target -> $SKILLS_DIR"
+  ln -s "$SKILLS_DIR" "$target"
 fi
 
-# 4. Register the Claude Code marketplace and install the plugin.
+# 4. Register the Relay plugin marketplace and install the plugin.
+#    The marketplace fetches the plugin from GitHub itself; the local clone is
+#    only needed for Copilot skills and the scripts.
 if command -v claude >/dev/null 2>&1; then
-  log "Registering Claude Code marketplace"
-  claude plugin marketplace add "$INSTALL_DIR" || \
+  log "Registering Relay plugin marketplace"
+  claude plugin marketplace add "$MARKETPLACE_URL" || \
     warn "Marketplace registration failed (may already be registered)."
   log "Installing sdl plugin"
-  claude plugin install sdl@relay-sdl || \
-    warn "Plugin install failed; run 'claude plugin install sdl@relay-sdl' manually."
+  claude plugin install sdl@relay || \
+    warn "Plugin install failed; run 'claude plugin install sdl@relay' manually."
 else
   warn "claude CLI not found. Skipping plugin install. Install Claude Code and re-run."
 fi
@@ -64,15 +69,14 @@ cat <<EOF
 Done.
 
   Install dir:      $INSTALL_DIR
-  Claude plugin:    sdl@relay-sdl (managed via 'claude plugin')
+  Claude plugin:    sdl@relay (managed via 'claude plugin')
   Copilot skills:   $COPILOT_SKILLS_DIR/$LINK_NAME
 
 To update later:
   cd $INSTALL_DIR && git pull
   # Copilot picks up the new skills immediately (they are symlinked).
-  # Claude Code does NOT — the plugin marketplace is a local clone and does
-  # not auto-refresh. After pulling, also run:
-  #   /plugin marketplace update relay-sdl   (then reload when prompted)
+  # Claude Code fetches the plugin from GitHub independently of this clone:
+  #   /plugin marketplace update relay   (then reload when prompted)
 
 To enable SDL on a project repo:
   $INSTALL_DIR/scripts/sync-to-repo.sh /path/to/repo

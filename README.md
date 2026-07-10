@@ -6,15 +6,24 @@ Central tools repo for our IEC 62443-4-1 aligned Secure Software Development Lif
 
 ## What's here
 
-- **`skills/`** — Claude Code / Copilot skills: `sdl-baseline` (once per repo), `sdl-spec`, `sdl-threat-model`, `sdl-review`, `sdl-dep-update` (routine dependency bumps). Author once, both tools consume.
-- **`templates/docs-sdl/`** — The four artifact stubs and `.sdl-meta.yml` copied into each new SDL cycle folder. `templates/baseline.md` is the repo-level baseline stub, dropped once per repo.
+- **`plugins/sdl/`** — The self-contained plugin: `skills/` (`sdl-baseline`, `sdl-spec`, `sdl-threat-model`, `sdl-review`, `sdl-dep-update`), `lib/` (scaffolding and validation scripts the skills invoke), and `templates/` (artifact stubs). Published as `sdl@relay` via the [Relay plugin marketplace](https://github.com/savioke/relay-plugin-marketplace); other agents consume the same skills from a clone.
 - **`.github/workflows/sdl-validate.yml`** — Reusable GitHub Actions workflow each project repo calls via `workflow_call`. CI is the SDL enforcement gate.
-- **`scripts/install.sh`** — One-shot dev setup: clones this repo, registers the Claude Code marketplace and installs the `sdl` plugin, and symlinks skills into Copilot.
+- **`scripts/install.sh`** — Full dev setup for non-Claude agents: clones this repo, symlinks skills into Copilot, and also registers the marketplace for Claude Code.
 - **`scripts/sync-to-repo.sh`** — Per-project init: drops the workflow file and creates `docs/sdl/`.
 - **`docs/`** — `62443-mapping.md` (audit-facing), [`developer-guide.md`](docs/developer-guide.md) (dev intro), [`dependency-updates.md`](docs/dependency-updates.md) (supply-chain update policy), `admin-setup.md` (releasing, repo and developer onboarding).
-- **`.claude-plugin/marketplace.json` + `plugins/sdl/`** — Claude Code plugin marketplace path. Same skills, served via the marketplace UX.
 
 ## Install (per developer, once)
+
+**Claude Code only** (the common case) — no clone needed. In Claude Code:
+
+```
+/plugin marketplace add savioke/relay-plugin-marketplace
+/plugin install sdl@relay
+```
+
+Updates: `/plugin marketplace update relay`.
+
+**Copilot or other agents** (also covers Claude Code):
 
 ```
 gh repo clone savioke/sdl ~/.sdl-governance

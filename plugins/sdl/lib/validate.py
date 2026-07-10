@@ -222,10 +222,11 @@ def find_cycle_for_branch(repo: Path, branch: str) -> Path | None:
 
 
 def template_dir() -> Path | None:
-    """Locate the templates dir from the central install for non-stub comparison."""
+    """Locate the templates dir for non-stub comparison: next to this file
+    (plugin install or checkout), else the clone at ~/.sdl-governance."""
     candidates = [
-        Path.home() / ".sdl-governance" / "templates" / "docs-sdl",
         Path(__file__).resolve().parent.parent / "templates" / "docs-sdl",
+        Path.home() / ".sdl-governance" / "plugins" / "sdl" / "templates" / "docs-sdl",
     ]
     for c in candidates:
         if c.is_dir():
