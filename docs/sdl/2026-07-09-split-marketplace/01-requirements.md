@@ -8,7 +8,7 @@ Move the plugin marketplace out of this repo into a dedicated org-wide repo (`sa
 
 ## Scope
 
-In scope: deleting `.claude-plugin/marketplace.json` here (its replacement lives in `savioke/relay-plugin-marketplace`); moving `skills/`, `lib/`, `templates/` under `plugins/sdl/`; plugin-relative tooling paths in `sdl-spec`, `sdl-review`, `sdl-dep-update` SKILL.md files and `validate.py`'s `template_dir()`; path updates in `install.sh` (Copilot symlink target, marketplace registration by SSH URL), `sync-to-repo.sh`, both workflows, and docs; plugin version bump to 0.6.0.
+In scope: deleting `.claude-plugin/marketplace.json` here (its replacement lives in `savioke/relay-plugin-marketplace`); moving `skills/`, `lib/`, `templates/` under `plugins/sdl/`; plugin-relative tooling paths in `sdl-spec`, `sdl-review`, `sdl-dep-update` SKILL.md files and `validate.py`'s `template_dir()`; path updates in `install.sh` (Copilot symlink target, marketplace registration by public HTTPS URL), `sync-to-repo.sh`, both workflows, and docs; plugin version bump to 0.6.0.
 
 Out of scope: the marketplace repo's own contents (one manifest, validated with `claude plugin validate` but not SDL-gated — accepted as baseline:B7 this cycle); sha-pinning the plugin source (tracks `main`, matching the prior clone behavior); migration automation for the sole pre-split user (manual, per the same reasoning as 2026-07-09-marketplace-rename).
 
