@@ -34,7 +34,7 @@
 
 - **2026-07-09-marketplace-rename T1 (orphaned registration)** — recurs identically: existing `relay-sdl` registrations stop updating after this merges. Same disposition — one known user (the maintainer) migrates manually (`/plugin marketplace remove relay-sdl`, add `relay`, install `sdl@relay`); fresh installs unaffected. Not re-litigated.
 - **baseline:B2 (skill-instruction injection)** — the skills moved and their tooling paths changed; content otherwise unchanged. Still gated as code by the validator ("skills" in path parts still matches `plugins/sdl/skills/`, verified by test suite).
-- **baseline:B3 (workstation scripts)** — `install.sh` changes are path/argument-level: Copilot symlink target and marketplace registration argument (local dir → SSH URL into the existing `claude plugin marketplace add` call). No new executable logic. `accept` unchanged.
+- **baseline:B3 (workstation scripts)** — `install.sh` changes are path/argument-level: Copilot symlink target and marketplace registration argument (local dir → public HTTPS URL into the existing `claude plugin marketplace add` call). No new executable logic. `accept` unchanged.
 
 ## Out-of-scope threats
 
