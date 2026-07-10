@@ -14,12 +14,14 @@ Central tools repo for our IEC 62443-4-1 aligned Secure Software Development Lif
 
 ## Install (per developer, once)
 
-**Claude Code only** (the common case) — no clone needed. In Claude Code:
+**Claude Code*:
 
 ```
 /plugin marketplace add savioke/relay-plugin-marketplace
 /plugin install sdl@relay
 ```
+
+This installs the skills and helper scripts into Claude's config dir.
 
 Updates: `/plugin marketplace update relay`.
 
@@ -29,6 +31,8 @@ Updates: `/plugin marketplace update relay`.
 gh repo clone savioke/sdl ~/.sdl-governance
 ~/.sdl-governance/scripts/install.sh
 ```
+
+This sets up symlinks to the skills and help scripts for agents other than Claude Code.
 
 Updates: `cd ~/.sdl-governance && git pull`.
 
