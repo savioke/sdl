@@ -26,7 +26,7 @@ None new. Public repo, no secrets — per `baseline.md`. The marketplace repo is
 
 ## External inputs introduced <!-- SR-2 -->
 
-None. No new network fetches in scripts: `install.sh` swaps the argument of the existing `claude plugin marketplace add` from a local path to an SSH URL — the fetch happens inside the `claude` CLI, as it already did for plugin installs.
+None. No new network fetches in scripts: `install.sh` swaps the argument of the existing `claude plugin marketplace add` from a local path to a public HTTPS URL — the fetch happens inside the `claude` CLI, as it already did for plugin installs.
 
 ## Security requirements <!-- SR-3, SR-4 -->
 
