@@ -49,7 +49,7 @@ validator does not parse lockfile contents.
 
 Deterministic, re-run in CI rather than trusted from the record where possible:
 
-- `lib/check_pins.py` — every pinned `uses:` SHA must match the upstream tag in
+- `plugins/sdl/lib/check_pins.py` — every pinned `uses:` SHA must match the upstream tag in
   its version comment. Detects retag-after-pin drift and lying comments. It
   cannot detect a release that was already compromised when pinned; that is
   what release-note review and the escalation tier are for.

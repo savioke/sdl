@@ -36,6 +36,6 @@ jobs:
 
       - name: Run validator
         run: |
-          python .sdl-governance/lib/validate.py \
+          python .sdl-governance/plugins/sdl/lib/validate.py \
             --base "${{ inputs.base }}" \
             --repo .

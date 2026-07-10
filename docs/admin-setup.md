@@ -8,8 +8,9 @@ This document is for administrators. Day-to-day developers should read `develope
 
 | Piece | Where it lives | Why |
 |-------|----------------|-----|
-| `savioke/sdl` repo (public) | github.com/savioke/sdl | Single source of truth for skills, templates, workflows. |
-| Cloned install at `~/.sdl-governance` on each dev box | Per-developer | Source for skills + scripts on the local machine. |
+| `savioke/sdl` repo (public) | github.com/savioke/sdl | Single source of truth: the `sdl` plugin (skills, lib, templates), workflows, scripts. |
+| `savioke/relay-plugin-marketplace` repo (public) | github.com/savioke/relay-plugin-marketplace | Org-wide Claude Code plugin marketplace; its manifest points at `plugins/sdl` here. How Claude Code devs install and update. |
+| Cloned install at `~/.sdl-governance` | Per-developer, only if they use Copilot or another non-Claude agent; also needed by whoever runs `sync-to-repo.sh` | Non-Claude agents have no marketplace path, so they read skills from the clone. |
 
 The repo is public. Consuming repos' CI checks it out with the default `GITHUB_TOKEN`, and the reusable workflow (`sdl-validate.yml`) is callable by any repo — no deploy key, org secret, or access policy is required. The repo holds no secrets and nothing competitively sensitive (see "If we ever need to go private" below).
 
@@ -48,27 +49,35 @@ Then have them run the `sdl-baseline` skill once ("initialize the SDL baseline")
 
 ## Onboarding a new developer
 
-Send them:
+**Claude Code only** (the common case) — send them two slash commands, no clone:
+
+```
+/plugin marketplace add savioke/relay-plugin-marketplace
+/plugin install sdl@relay
+```
+
+They update later with `/plugin marketplace update relay`.
+
+**Copilot or other agents** — send them:
 
 ```sh
 gh repo clone savioke/sdl ~/.sdl-governance
 ~/.sdl-governance/scripts/install.sh
 ```
 
-That clones the repo and symlinks skills into Claude Code (`~/.claude/skills/sdl`) and Copilot (`~/.copilot/skills/sdl`).
-
-They update later with `cd ~/.sdl-governance && git pull`. Symlinks mean updates apply everywhere immediately.
+That symlinks skills into Copilot (`~/.copilot/skills/sdl`) and also registers the Claude Code marketplace. They update with `cd ~/.sdl-governance && git pull`; the symlink applies it to Copilot immediately.
 
 ## Updating the validator or skills
 
-Skills and the validator are pulled live from this repo by all consumers (devs via symlinks, CI via `actions/checkout`). To ship a change:
+Skills and the validator are pulled live from this repo by all consumers (Claude Code via the marketplace, Copilot via clone symlinks, CI via `actions/checkout`). To ship a change:
 
-1. Make the change on a branch in this repo.
+1. Make the change on a branch in this repo. Bump `version` in `plugins/sdl/.claude-plugin/plugin.json` if the plugin content changed.
 2. Open a PR. This repo runs its own SDL gate (`.github/workflows/sdl.yml`, self-referential at `@v1`) plus `self-check.yml` unit tests — but you are still the primary reviewer: single maintainer, no second human. Bad logic here breaks every other repo's CI, so self-review carefully.
 3. Merge to `main`.
 4. Move the appropriate version tag forward (or cut a new one) so consuming repos pick it up.
+5. If the plugin version changed, mirror it in the marketplace manifest (`.claude-plugin/marketplace.json` in `savioke/relay-plugin-marketplace`). Claude Code devs pick the change up on their next `/plugin marketplace update relay` either way — the plugin tracks `main` — but the version string is what they see in the plugin UI.
 
-Consuming repos can pin a major version (`@v1`) and accept moving tags, or pin an exact tag (`@v1.2.0`) for stricter reproducibility. Default is `@v1` — see `templates/docs-sdl/...` and `scripts/sync-to-repo.sh` (the `SDL_REF` variable).
+Consuming repos can pin a major version (`@v1`) and accept moving tags, or pin an exact tag (`@v1.2.0`) for stricter reproducibility. Default is `@v1` — see `plugins/sdl/templates/docs-sdl/...` and `scripts/sync-to-repo.sh` (the `SDL_REF` variable).
 
 ## Why this repo is public
 
@@ -85,6 +94,8 @@ If we ever need to go private, the conversion is: flip visibility, re-add a read
 
 **A consuming repo's CI fails to parse with "called workflow was not found" (`savioke/sdl/.github/workflows/sdl-validate.yml@v1`).** Either the `@v1` tag doesn't exist in this repo, or this repo was made private (a private repo's reusable workflow is invisible to callers without an access policy). Confirm the tag exists and the repo is public.
 
-**Local skills aren't loading for a developer.** Confirm `~/.claude/skills/sdl` is a symlink pointing at `~/.sdl-governance/skills` (`ls -la ~/.claude/skills/sdl`). If something else is at that path, move it aside and re-run `install.sh`.
+**Skills aren't loading in Claude Code.** Run `/plugin` and confirm `sdl` is installed and enabled from marketplace `relay`. If the marketplace is missing, re-add it (`/plugin marketplace add savioke/relay-plugin-marketplace`).
+
+**Skills aren't loading in Copilot.** Confirm `~/.copilot/skills/sdl` is a symlink pointing at `~/.sdl-governance/plugins/sdl/skills` (`ls -la ~/.copilot/skills/sdl`). If something else is at that path, move it aside and re-run `install.sh`.
 
 **Validator passes locally but fails in CI (or vice versa).** Confirm both are running the same `SDL_REF` (tag) and the same merge base. Local default is `HEAD~1`-ish depending on branch state; CI uses `origin/main`.

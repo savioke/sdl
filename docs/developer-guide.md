@@ -20,14 +20,27 @@ That's it. No forms, no Jira tickets, no separate security reviews unless someth
 
 ## One-time setup
 
+**Claude Code** (the common case). In any Claude Code session:
+
 ```
-gh repo clone savioke/sdl
-./sdl/scripts/install.sh
+/plugin marketplace add savioke/relay-plugin-marketplace
+/plugin install sdl@relay
 ```
 
-Installs skills globally for Claude Code and Copilot. To update: `cd ~/.sdl-governance && git pull`. Copilot picks up the new skills immediately (they are symlinked); **Claude Code does not** — its plugin marketplace is a local clone that does not auto-refresh, so after pulling also run `/plugin marketplace update relay-sdl` and reload when prompted.
+That's the whole install — skills, templates, and tooling arrive as one plugin. To update: `/plugin marketplace update relay` and reload when prompted.
+
+**Copilot or other agents.** These have no marketplace path, so they read the skills from a local clone:
+
+```
+gh repo clone savioke/sdl ~/.sdl-governance
+~/.sdl-governance/scripts/install.sh
+```
+
+The script symlinks skills into Copilot and also sets up Claude Code as above. To update: `cd ~/.sdl-governance && git pull` (Copilot sees it immediately; Claude Code still updates via `/plugin marketplace update relay`).
 
 ## Per-repo setup (run once when a repo first adopts SDL)
+
+This step needs the clone (see "Copilot or other agents" above), even if you otherwise use only Claude Code:
 
 ```
 ~/.sdl-governance/scripts/sync-to-repo.sh /path/to/your/repo
@@ -92,4 +105,4 @@ Edit the file. The artifact is the source of truth, not the conversation. Commit
 
 - Plan and architecture: `Plan.md`
 - Practice mapping: `docs/62443-mapping.md`
-- Skills: `skills/`
+- Skills: `plugins/sdl/skills/`

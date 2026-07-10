@@ -15,36 +15,34 @@ Central tools repo for IEC 62443-4-1 aligned Secure Software Development Lifecyc
 sdl/
 ├── README.md
 ├── Plan.md                            # this file
-├── marketplace.json                   # Claude Code plugin marketplace manifest
 ├── plugins/
-│   └── sdl/
+│   └── sdl/                           # the self-contained plugin
 │       ├── .claude-plugin/plugin.json
-│       └── skills/                    # symlinks to ../../../skills/*
-├── skills/                            # canonical skills, both tools read these
-│   ├── sdl-baseline/SKILL.md          # once per repo: standing security posture
-│   ├── sdl-spec/SKILL.md
-│   ├── sdl-threat-model/SKILL.md
-│   └── sdl-review/
-│       ├── SKILL.md
-│       └── security-checks.md         # category list, not a rule library
-├── templates/
-│   ├── baseline.md                    # repo-level baseline stub (once per repo)
-│   └── docs-sdl/                      # four artifact stubs + .sdl-meta.yml
+│       ├── skills/                    # canonical skills, all agents read these
+│       │   ├── sdl-baseline/SKILL.md  # once per repo: standing security posture
+│       │   ├── sdl-spec/SKILL.md
+│       │   ├── sdl-threat-model/SKILL.md
+│       │   ├── sdl-review/
+│       │   │   ├── SKILL.md
+│       │   │   └── security-checks.md # category list, not a rule library
+│       │   └── sdl-dep-update/SKILL.md
+│       ├── lib/
+│       │   └── validate.py            # validation logic (CI + skills), plus scaffolding tools
+│       └── templates/
+│           ├── baseline.md            # repo-level baseline stub (once per repo)
+│           └── docs-sdl/              # four artifact stubs + .sdl-meta.yml
 ├── .github/workflows/
 │   ├── sdl-validate.yml               # reusable workflow (workflow_call)
 │   └── self-check.yml                 # CI on this repo itself
 ├── scripts/
-│   ├── install.sh                     # one-shot dev setup
-│   ├── sync-to-repo.sh                # adds minimal per-repo files
-│   └── new-cycle.sh                   # called by skills to scaffold a folder
-├── lib/
-│   └── validate.py                    # CI validation logic
+│   ├── install.sh                     # dev setup for non-Claude agents
+│   └── sync-to-repo.sh                # adds minimal per-repo files
 └── docs/
     ├── 62443-mapping.md               # field → practice mapping (audit-facing)
     └── developer-guide.md             # one page for devs
 ```
 
-`plugins/sdl/skills/*` are symlinks to `../../../skills/*` so the marketplace path and the flat `skills/` folder serve identical files.
+Everything the skills invoke at runtime (`lib/`, `templates/`) lives inside `plugins/sdl/`, so the plugin is self-contained: a marketplace install works with no clone. Skills locate the tooling relative to their own SKILL.md (two levels up), which resolves identically in a Claude plugin install and in a clone. The plugin is published as `sdl@relay` via the separate [relay-plugin-marketplace](https://github.com/savioke/relay-plugin-marketplace) repo, whose manifest points at `plugins/sdl` here.
 
 ## Per-project repo footprint
 
@@ -110,7 +108,7 @@ None. Considered and rejected: pre-commit warnings and `git log` decoration shim
 
 ## CI validation
 
-`.github/workflows/sdl-validate.yml` calls `lib/validate.py` against the diff:
+`.github/workflows/sdl-validate.yml` calls `plugins/sdl/lib/validate.py` against the diff:
 
 1. Substantive code changes → matching `.sdl-meta.yml` exists for current branch and was modified in this branch's history. "Code" means a source extension (`CODE_EXTS_NON_DOC`), a GitHub-executable file (`.github/workflows/`, `.github/actions/`, `action.yml`), or a skill definition (`SKILL.md` or `.md` under `skills/`). Plain markdown, SDL artifacts, and benign config YAML do not gate.
 2. All four artifact files present and not byte-equal to templates.
@@ -121,15 +119,14 @@ Start strict on (1) and (2); add (3) once skills are stable enough that violatio
 
 ## Distribution
 
-Repo is private. Everyone has `git:` access via SSH.
+Claude Code developers (the common case) need no clone: `/plugin marketplace add savioke/relay-plugin-marketplace`, `/plugin install sdl@relay`. Updates via `/plugin marketplace update relay`.
 
-`scripts/install.sh`:
+`scripts/install.sh` (Copilot / other agents):
 1. `git clone git@github.com:savioke/sdl.git ~/.sdl-governance`
-2. `ln -sf ~/.sdl-governance/skills ~/.claude/skills/sdl`
-3. `ln -sf ~/.sdl-governance/skills ~/.copilot/skills/sdl`
-4. `claude /plugin marketplace add savioke/sdl` for nicer Claude update UX.
+2. `ln -sf ~/.sdl-governance/plugins/sdl/skills ~/.copilot/skills/sdl`
+3. `claude plugin marketplace add` + `claude plugin install sdl@relay`, same as above.
 
-Updates: `cd ~/.sdl-governance && git pull`. Copilot sees the new version immediately (symlinked skills); Claude Code does not — its plugin marketplace is a local clone that does not auto-refresh, so it also needs `/plugin marketplace update relay-sdl` and a reload.
+Updates: `cd ~/.sdl-governance && git pull`. Copilot sees the new version immediately (symlinked skills); Claude Code fetches the plugin from GitHub via the marketplace, so it needs `/plugin marketplace update relay` and a reload.
 
 `scripts/sync-to-repo.sh <repo>` (run once per project repo):
 1. Copies `.github/workflows/sdl.yml`.

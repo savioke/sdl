@@ -46,10 +46,10 @@ you find a real conflict.
 
 ### 4. Write the record
 
-Scaffold the cycle folder:
+Scaffold the cycle folder (`<plugin-root>` is the directory two levels above this SKILL.md):
 
 ```
-python3 ~/.sdl-governance/lib/new_cycle.py --class dependency-update
+python3 <plugin-root>/lib/new_cycle.py --class dependency-update
 ```
 
 It creates `docs/sdl/YYYY-MM-DD-<slug>/` with `.sdl-meta.yml` (including
@@ -57,8 +57,8 @@ It creates `docs/sdl/YYYY-MM-DD-<slug>/` with `.sdl-meta.yml` (including
 the updates table (exact old/new versions), checks you actually performed,
 notes.
 
-Regenerate the index (`python3 ~/.sdl-governance/lib/gen_index.py`), run the
-validator (`python3 ~/.sdl-governance/lib/validate.py --base origin/main`), and
+Regenerate the index (`python3 <plugin-root>/lib/gen_index.py`), run the
+validator (`python3 <plugin-root>/lib/validate.py --base origin/main`), and
 show the user the result.
 
 ## Tone
