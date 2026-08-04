@@ -1,6 +1,6 @@
 ---
 name: sdl-baseline
-description: Author the repo-level SDL security baseline once, when a repo adopts SDL. Use right after sync-to-repo.sh has run, when docs/sdl/baseline.md is missing or still a stub, or when the user says "initialize SDL", "set up the SDL baseline", or "document the security posture of this repo". Scans the existing codebase once, runs a short interview, and writes the standing exposure model, trust boundaries, assets, and standing risk register so later feature cycles stay small.
+description: Adopt SDL in a repo and author its security baseline. Use when the user says "initialize SDL", "add SDL to this repo", "set up the SDL baseline", or "document the security posture of this repo", or when docs/sdl/baseline.md is missing or still a stub. Scaffolds the repo (CI workflow, docs/sdl/) if it hasn't adopted SDL yet, then scans the existing codebase once, runs a short interview, and writes the standing exposure model, trust boundaries, assets, and standing risk register so later feature cycles stay small.
 ---
 
 # sdl-baseline
@@ -9,10 +9,20 @@ You author the repo's security baseline: the standing facts every future SDL cyc
 
 ## Preconditions
 
-1. The repo has a `docs/sdl/` folder. If not, this skill does not apply — exit silently.
+1. The repo has a `docs/sdl/` folder, **or** the user explicitly asked to adopt/initialize SDL here. If `docs/sdl/` is missing and the user did not ask, this skill does not apply — exit silently. Never scaffold a repo into SDL without an explicit request.
 2. `docs/sdl/baseline.md` is missing or still a stub. If it exists with real content, do not overwrite — tell the user it exists and offer to update specific sections instead.
 
 ## What to do
+
+### 0. Scaffold the repo if it hasn't adopted SDL yet
+
+If `docs/sdl/` is missing (user explicitly asked — see preconditions), run the setup script from the repo root. `<plugin-root>` is the directory two levels above this SKILL.md (in Claude Code it is also available as `$CLAUDE_PLUGIN_ROOT`):
+
+```
+bash <plugin-root>/lib/sync_to_repo.sh .
+```
+
+It writes `.github/workflows/sdl.yml` (the CI gate), `docs/sdl/.gitkeep`, and a `docs/sdl/baseline.md` stub; it refuses to overwrite existing files. Do not hand-write these — the script keeps setup deterministic. Tell the user what was added and that it should be committed, then continue below to fill the baseline.
 
 ### 1. Scan the codebase once
 

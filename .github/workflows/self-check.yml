@@ -40,7 +40,7 @@ jobs:
       - name: Shellcheck scripts
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
-          shellcheck scripts/*.sh
+          shellcheck scripts/*.sh plugins/sdl/lib/*.sh
 
   structure:
     runs-on: ubuntu-latest
@@ -67,6 +67,7 @@ jobs:
             .github/workflows/sdl-validate.yml \
             scripts/install.sh \
             scripts/sync-to-repo.sh \
+            plugins/sdl/lib/sync_to_repo.sh \
             plugins/sdl/lib/validate.py \
             plugins/sdl/lib/check_pins.py \
             plugins/sdl/lib/new_cycle.py \
