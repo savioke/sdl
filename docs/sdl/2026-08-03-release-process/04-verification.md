@@ -78,6 +78,12 @@ Mitigations were exercised, not just read: `release.sh` was run against a throwa
 - **Verified by execution.** A fixture (bare origin, fake marketplace repo, stubbed `gh`) ran eleven malformed manifests — string/null/missing/list `source`, non-array `plugins`, missing `plugins`, array top level, non-object entries, no matching plugin, duplicate entries, invalid JSON — plus the happy path. Every refusal aborted with **no tag in the origin**, and the happy path produced both tags and a correctly rewritten manifest with key order and formatting preserved. Negative-controlled: with the preflight removed, all eleven push `v1.0.0` and `v1` and *then* fail, reproducing the stranded state exactly.
 - **References:** `scripts/release.sh:79-144` (preflight and `manifest_py`), `:210-215` (write, with the recovery message); `docs/releasing.md`, "What the script does".
 
+#### Documentation promised a release-pending signal that the deadlock fix removed
+
+- **Finding:** raised in PR review. `docs/admin-setup.md` step 4 still said `main` "stays red until you do, which is the intended 'release pending' signal" — written before the deadlock fix, and not updated with it. Released-mode now runs only on `schedule`/`workflow_dispatch`, so `main` does not go red between a merge and its release. This is a documentation defect with an operational edge rather than a wording slip: it told a single maintainer that a red `main` would remind them to release, so the failure mode is trusting a control that no longer exists and shipping nothing until someone notices. The stale line was the only instance — `docs/releasing.md` "What CI checks", `03-implementation.md` deviations, and residual risk R5 all already described the real behavior, which is why the inconsistency survived.
+- **Fix:** step 4 now states plainly that nothing goes red in the meantime, names the daily run (06:17 UTC) as the backstop rather than the control, gives both on-demand checks (`workflow_dispatch` from the Actions tab, or `check_release.py --mode released` locally), and points at the reasoning in `releasing.md` and at R5. Releasing immediately after the merge is identified as the actual control.
+- **References:** `docs/admin-setup.md:68-70`; `docs/releasing.md:70`; residual risk R5.
+
 **Not applicable (no code in these areas):** persistence/SQL, deserialization of untrusted formats, cryptography, authn/authz, secrets handling, logging/PII, frontend, native, dependency additions.
 
 ## Static analysis and SBOM <!-- SVV-3, SM-9 -->
