@@ -32,9 +32,11 @@ Have whoever owns the repo run, on their workstation:
 ~/.sdl-governance/scripts/sync-to-repo.sh /path/to/their/repo
 ```
 
-That drops `.github/workflows/sdl.yml`, creates `docs/sdl/.gitkeep`, and writes a `docs/sdl/baseline.md` stub. All get committed. No admin step is needed — the workflow checks this public repo out with the default `GITHUB_TOKEN`, so CI works as soon as the files land, including on Dependabot and external fork PRs.
+That drops `.github/workflows/sdl.yml`, creates `docs/sdl/.gitkeep`, and writes a `docs/sdl/baseline.md` stub. No admin step is needed — the workflow checks this public repo out with the default `GITHUB_TOKEN`, so CI works as soon as the files land, including on Dependabot and external fork PRs.
 
-Then have them run the `sdl-baseline` skill once ("initialize the SDL baseline"). It records the repo's standing security posture — exposure model, trust boundaries, standing risks — in `baseline.md`, which later cycles reference instead of re-deriving. CI emits a non-fatal `[warn]` until the baseline is filled.
+Then have them run the `sdl-baseline` skill once ("initialize the SDL baseline"), and commit the scaffold and the filled baseline in one PR. It records the repo's standing security posture — exposure model, trust boundaries, standing risks — in `baseline.md`, which later cycles reference instead of re-deriving.
+
+The gate waives the cycle requirement for that adoption PR (the workflow it installs counts as code, and no cycle can exist yet) — but only for a diff that adds `sdl.yml` and `baseline.md` and touches nothing else outside `docs/sdl/`, and only once the baseline is more than a stub. Splitting it — scaffold in one PR, baseline in the next — fails the gate, and so does folding unrelated code in. Both are recoverable: fill the baseline, or run `sdl-spec` for a real cycle. On later PRs, an unfilled baseline is only a non-fatal `[warn]`.
 
 ## Onboarding a new developer
 

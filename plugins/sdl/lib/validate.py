@@ -52,6 +52,22 @@ def is_skill(p: Path) -> bool:
     return p.name == "SKILL.md" or ("skills" in p.parts and p.suffix == ".md")
 
 
+# Adoption cycle class. A repo's first SDL PR adds the CI workflow — which the
+# gate counts as code — and the baseline, but no feature cycle exists yet and
+# none should: the baseline *is* the adoption artifact. Without this the gate
+# demands a decoy cycle for the very PR that installs it.
+ADOPTION_WORKFLOW = ".github/workflows/sdl.yml"
+BASELINE = "docs/sdl/baseline.md"
+
+# The generated caller delegates everything to the reusable workflow. Any other
+# uses:, or any inline run:, means the PR is shipping CI behavior of its own
+# under the adoption exemption — that needs a cycle like any other code.
+SDL_CALLER_RE = re.compile(
+    r"^\s*(?:-\s+)?uses:\s*savioke/sdl/\.github/workflows/sdl-validate\.yml@[\w./-]+\s*$"
+)
+INLINE_RUN_RE = re.compile(r"^\s*(?:-\s+)?run:")
+
+
 # Dependency-update cycle class (docs/dependency-updates.md). Exact filenames
 # only — fail closed on anything not positively identified as a manifest or
 # lockfile. Manifest *content* can still carry executable config (npm scripts,
@@ -203,6 +219,11 @@ def changed_files(base: str) -> list[Path]:
     return [Path(p) for p in raw if p]
 
 
+def added_files(base: str) -> set[str]:
+    raw = run(["git", "diff", "--name-only", "--diff-filter=A", f"{base}...HEAD"]).splitlines()
+    return {p for p in raw if p}
+
+
 def code_changed(files: list[Path]) -> bool:
     return any(
         f.suffix in CODE_EXTS_NON_DOC or is_workflow(f) or is_skill(f)
@@ -262,13 +283,62 @@ def is_nonstub(cycle_file: Path, template_file: Path | None) -> bool:
     return False
 
 
-def check_cycle_present(repo: Path, branch: str, files: list[Path]) -> Result:
+def is_adoption_workflow(repo: Path) -> bool:
+    """True if the repo's sdl.yml is the generated caller and nothing more."""
+    path = repo / ADOPTION_WORKFLOW
+    if not path.is_file():
+        return False
+    saw_caller = False
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if INLINE_RUN_RE.match(line):
+            return False
+        if "uses:" in line:
+            if not SDL_CALLER_RE.match(line):
+                return False
+            saw_caller = True
+    return saw_caller
+
+
+def check_adoption(repo: Path, base: str, files: list[Path], templates: Path | None) -> Result | None:
+    """Recognize the PR that adopts SDL, which cannot have a cycle yet.
+
+    Returns None when the diff is not adoption-shaped, so the caller falls back
+    to the ordinary cycle requirement. Narrow on purpose: it fires only while
+    baseline.md is being ADDED, so a repo gets it once and never again, and the
+    only non-doc file it admits is the generated workflow, also newly added.
+    """
+    added = added_files(base)
+    if BASELINE not in added:
+        return None
+    for f in files:
+        p = f.as_posix()
+        if p.startswith("docs/sdl/"):
+            continue
+        if p == ADOPTION_WORKFLOW and p in added:
+            continue
+        return None
+    tmpl = templates.parent / "baseline.md" if templates else None
+    if not is_nonstub(repo / BASELINE, tmpl if tmpl and tmpl.is_file() else None):
+        return Result(False, "adoption PR: docs/sdl/baseline.md is still a stub — "
+                             "run the sdl-baseline skill to fill it")
+    if not is_adoption_workflow(repo):
+        return Result(False, f"adoption PR: {ADOPTION_WORKFLOW} is not the generated SDL caller — "
+                             "a PR that also changes CI behavior needs a cycle")
+    return Result(True, "adoption PR: baseline authored, no cycle required")
+
+
+def check_cycle_present(repo: Path, branch: str, files: list[Path],
+                        base: str, templates: Path | None) -> Result:
     if not code_changed(files):
         return Result(True, "no substantive code changes; cycle presence not required")
     cycle = find_cycle_for_branch(repo, branch)
-    if cycle is None:
-        return Result(False, f"code changed but no docs/sdl/*/.sdl-meta.yml has branch: {branch}")
-    return Result(True, f"cycle found: {cycle.relative_to(repo)}")
+    if cycle is not None:
+        return Result(True, f"cycle found: {cycle.relative_to(repo)}")
+    adoption = check_adoption(repo, base, files, templates)
+    if adoption is not None:
+        return adoption
+    return Result(False, f"code changed but no SDL cycle declares this branch — no "
+                         f"docs/sdl/*/.sdl-meta.yml has 'branch: {branch}'. Run the sdl-spec skill.")
 
 
 def check_files_present(cycle: Path) -> Result:
@@ -324,7 +394,7 @@ def main() -> int:
     templates = template_dir()
 
     results: list[Result] = []
-    results.append(check_cycle_present(repo, branch, files))
+    results.append(check_cycle_present(repo, branch, files, args.base, templates))
 
     cycle = find_cycle_for_branch(repo, branch)
     if cycle is not None:

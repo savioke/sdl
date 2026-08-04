@@ -48,7 +48,9 @@ This step needs the clone (see "Copilot or other agents" above), even if you oth
 ~/.sdl-governance/scripts/sync-to-repo.sh /path/to/your/repo
 ```
 
-Drops `.github/workflows/sdl.yml`, creates `docs/sdl/`, and writes a `docs/sdl/baseline.md` stub. All are committed. Then run `sdl-baseline` once (see step 0 above) to fill the baseline.
+Drops `.github/workflows/sdl.yml`, creates `docs/sdl/`, and writes a `docs/sdl/baseline.md` stub. Then run `sdl-baseline` once (see step 0 above) to fill the baseline, and commit the scaffold and the filled baseline together.
+
+That adoption PR needs no cycle: the gate counts `sdl.yml` as code, but it recognizes a diff that adds the workflow and the baseline and touches nothing else outside `docs/sdl/`, and takes the baseline as the artifact. It waives the cycle only for a baseline with real content — push the stub alone and the gate fails asking you to fill it. Bundle any other change into a later PR; mixing code into the adoption PR puts you back on the ordinary path of needing a cycle.
 
 Note that this is the only step that has to happen *in the repo*. Cloning a repo that already opted in needs nothing — no per-clone setup, no hook installation. Just clone and start working.
 

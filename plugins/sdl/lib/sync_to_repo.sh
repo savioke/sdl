@@ -70,14 +70,17 @@ fi
 
 cat <<EOF
 
-Done. Commit the new files:
+Done. Before committing, ask your agent to run the sdl-baseline skill
+("initialize the SDL baseline") to record this repo's standing security posture.
+Per-feature cycles reference the baseline and stay small.
+
+Then commit the scaffold and the filled baseline together:
 
   cd $repo
   git add .github/workflows/sdl.yml docs/sdl/.gitkeep docs/sdl/baseline.md
   git commit -m "sdl: opt in to org SDL governance"
 
-Then, once, ask your agent to run the sdl-baseline skill ("initialize the SDL
-baseline") to record this repo's standing security posture. Per-feature cycles
-reference the baseline and stay small.
+The gate recognizes that adoption PR and needs no cycle for it — but only if the
+baseline has real content. Pushing the stub on its own fails the gate.
 
 EOF
