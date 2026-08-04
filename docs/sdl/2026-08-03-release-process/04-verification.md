@@ -30,13 +30,14 @@ Mitigations were exercised, not just read: `release.sh` was run against a throwa
 
 ### External HTTP calls <!-- T1 -->
 
-- **Finding:** verified by unit test. HTTPS with default certificate verification, a 30 s timeout, and a 1 MB cap applied *before* parsing; oversize bodies are refused unparsed. Transport failure, HTTP error, oversize, and malformed JSON all return an error value rather than raising, and released mode downgrades an unreachable manifest to a note while still failing on a fetched-and-disagreeing one — confirmed by two tests asserting opposite outcomes for those two cases.
-- **References:** `scripts/check_release.py:150-174`, `:265-272`; `scripts/test_check_release.py` (`FetchManifest`, `test_unreachable_marketplace_warns_but_does_not_fail`, `test_disagreeing_marketplace_fails`).
+- **Finding:** verified by unit test. HTTPS with default certificate verification, a 30 s timeout, and a 1 MB cap applied *before* parsing; oversize bodies are refused unparsed. Transport failure, HTTP error, oversize, malformed JSON, and **non-UTF-8 bytes** all return an error value rather than raising, and released mode downgrades an unreachable manifest to a note while still failing on a fetched-and-disagreeing one — confirmed by two tests asserting opposite outcomes for those two cases.
+- **Non-UTF-8 bodies, raised in PR review as a suspected crash:** not a defect. The `body.decode("utf-8")` is inside the `try`, and `UnicodeDecodeError` subclasses `ValueError`, which the handler catches — so an undecodable body already returned `(None, "UnicodeDecodeError fetching <url>")`. Confirmed by executing `fetch_manifest` against three undecodable bodies rather than by reading the hierarchy. No behavior change was needed, but the coverage was implicit enough that a careful reader concluded the opposite, so it is now explicit: a comment names both `ValueError` subclasses that reach the handler and why, and a regression test asserts the three cases. The test was negative-controlled — narrowing the handler to `json.JSONDecodeError` makes all three subcases error with the escaped exception.
+- **References:** `scripts/check_release.py:150-177`, `:268-275`; `scripts/test_check_release.py` (`FetchManifest`, `test_non_utf8_body_returns_error_not_exception`, `test_unreachable_marketplace_warns_but_does_not_fail`, `test_disagreeing_marketplace_fails`).
 
 ### CI / supply chain <!-- T3 -->
 
 - **Finding:** verified. The new `release` job runs `check_release.py` only, which performs no writes and needs no `permissions:` grant beyond the default read; no secret is referenced by any workflow in this repo. Drift detection was exercised end to end against the fixture: after a successful release the released-mode check reported consistent, and committing a change to `plugins/sdl/lib/validate.py` without releasing was reported as "1 shipped file(s) changed since v1.0.0 and are not released". Released mode runs on the daily schedule rather than on push — see the deadlock defect below.
-- **References:** `.github/workflows/self-check.yml` (`release` job, `schedule` trigger), `scripts/check_release.py:217-274`.
+- **References:** `.github/workflows/self-check.yml` (`release` job, `schedule` trigger), `scripts/check_release.py:217-277`.
 
 ### Defects found and fixed during review
 
@@ -61,14 +62,14 @@ Mitigations were exercised, not just read: `release.sh` was run against a throwa
 
 - **Finding:** found while fixing the defect above, in the same code path. `check_released` discriminated on `if manifest is None` to decide whether the fetch had failed. `json.loads("null")` returns `None`, so a served body of `null` was indistinguishable from a transport failure: the check would report "marketplace manifest unreachable, not checked: None" and skip the comparison entirely. That inverts T1's intended failure direction — a manifest that *was* successfully fetched and *does* disagree would be silently downgraded to a note, and the note names no cause.
 - **Fix:** discriminate on `fetch_error is not None` instead. The value and the error are now independent, so a `null` body reaches `check_manifest` and is reported as drift, while a genuine fetch failure is still only a note. Two tests assert the opposite outcomes.
-- **References:** `scripts/check_release.py:265-272`; `scripts/test_check_release.py::ReleasedMode::test_a_manifest_body_of_literal_null_is_drift_not_an_outage`, `::test_a_genuine_fetch_failure_is_still_only_a_note`.
+- **References:** `scripts/check_release.py:268-275`; `scripts/test_check_release.py::ReleasedMode::test_a_manifest_body_of_literal_null_is_drift_not_an_outage`, `::test_a_genuine_fetch_failure_is_still_only_a_note`.
 
 **Not applicable (no code in these areas):** persistence/SQL, deserialization of untrusted formats, cryptography, authn/authz, secrets handling, logging/PII, frontend, native, dependency additions.
 
 ## Static analysis and SBOM <!-- SVV-3, SM-9 -->
 
 - `shellcheck scripts/*.sh plugins/sdl/lib/*.sh` — clean (CI-enforced).
-- `python -m unittest discover -s scripts -p 'test_*.py'` — 43 tests, pass.
+- `python -m unittest discover -s scripts -p 'test_*.py'` — 44 tests, pass.
 - Existing suite `lib.test_validate lib.test_check_pins lib.test_new_cycle lib.test_gen_index` — 78 tests, pass; unaffected by this cycle.
 - `gen_index.py --check` — current. `plugin.json` and the marketplace manifest parse as JSON.
 - No dependency changes, no SBOM delta.

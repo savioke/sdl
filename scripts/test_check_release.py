@@ -168,6 +168,20 @@ class FetchManifest(unittest.TestCase):
         self.assertIsNone(data)
         self.assertIn("JSONDecodeError", err)
 
+    def test_non_utf8_body_returns_error_not_exception(self):
+        # The decode happens before the parse and raises UnicodeDecodeError,
+        # which reaches the handler only because it subclasses ValueError.
+        # Asserted explicitly so a narrowed except tuple fails here.
+        for body in (b'{"name": "relay\xff", "plugins": []}',  # bad byte inside JSON
+                     b"\xff\xfe\x00{",                          # not text at all
+                     b"\xef\xbb\xbf\xc3\x28"):                  # BOM then bad sequence
+            with self.subTest(body=body):
+                with mock.patch.object(cr.urllib.request, "urlopen",
+                                       return_value=FakeResponse(body)):
+                    data, err = cr.fetch_manifest("owner/repo")
+                self.assertIsNone(data)
+                self.assertIn("UnicodeDecodeError", err)
+
     def test_oversized_body_is_refused_unparsed(self):
         body = b"[" + b" " * (cr.MAX_MANIFEST_BYTES + 10)
         with mock.patch.object(cr.urllib.request, "urlopen",

@@ -167,6 +167,9 @@ def fetch_manifest(repo_slug: str, timeout: int = 30) -> tuple[object, str | Non
             return json.loads(body.decode("utf-8")), None
     except urllib.error.HTTPError as e:
         return None, f"HTTP {e.code} fetching {url}"
+    # ValueError covers both ways the body can be unreadable: UnicodeDecodeError
+    # from the decode above and JSONDecodeError from the parse, each a subclass.
+    # Both are format failures, reported like an outage rather than as drift.
     except (urllib.error.URLError, TimeoutError, ValueError) as e:
         return None, f"{e.__class__.__name__} fetching {url}"
 
