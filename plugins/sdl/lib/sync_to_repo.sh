@@ -39,7 +39,14 @@ if [[ -e "$workflow" ]]; then
 else
   cat > "$workflow" <<EOF
 name: sdl
-on: [pull_request, push]
+on:
+  pull_request:
+  # Branch-filtered deliberately: an unfiltered push also fires on tag pushes,
+  # where the validator has nothing to say — it diffs against origin/main, so a
+  # release tag yields an empty diff and a vacuous pass, and a tag cut anywhere
+  # else demands a cycle for a push that changed no code.
+  push:
+    branches: [main]
 jobs:
   validate:
     uses: savioke/sdl/.github/workflows/sdl-validate.yml@${SDL_REF}
