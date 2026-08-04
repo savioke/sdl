@@ -2,7 +2,7 @@
   "name": "sdl",
   "displayName": "SDL Governance",
   "description": "Scaffold and review SDL artifacts (IEC 62443-4-1 aligned) per feature branch.",
-  "version": "0.7.0",
+  "version": "1.0.0",
   "author": {
     "name": "relay"
   }

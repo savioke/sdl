@@ -34,7 +34,7 @@ gh repo clone savioke/sdl ~/.sdl-governance
 
 This sets up symlinks to the skills and help scripts for agents other than Claude Code.
 
-Updates: `cd ~/.sdl-governance && git pull`.
+Updates: `cd ~/.sdl-governance && git pull`. Upgrading a clone made before 1.0.0 also needs one `scripts/install.sh` re-run — skills moved inside the plugin, and the old symlink no longer resolves.
 
 ## Enable on a project (per repo, once)
 

@@ -1,0 +1,72 @@
+# 04 — Verification
+
+<!-- SVV-1: Security requirements testing. SVV-2: Threat mitigation testing.
+     SVV-3: Vulnerability testing. DM-1: Defect management. -->
+
+## Review pass
+
+- **Reviewer:** sdl-review (Claude) + Joe Cooper
+- **Date:** 2026-08-03
+- **Diff range:** f670bdf (main)..working tree, pre-commit
+
+## Checks performed <!-- SVV-1, SVV-2 -->
+
+Mitigations were exercised, not just read: `release.sh` was run against a throwaway fixture (a bare origin, a fake marketplace repo, and a stubbed `gh`) so every refusal path and the full happy path executed for real.
+
+### Command execution / external inputs (new shell script) <!-- T2 -->
+
+- **Finding:** verified by execution. With `version` set to `1.0.0; touch /tmp/PWNED_BY_SDL`, the release aborted at the semver gate and the file was never created; `../../evil` and `1.0` were likewise refused before any git operation. The validated string is the only source of `$tag` and `$alias_tag`, the latter by parameter expansion rather than re-parsing.
+- **References:** `scripts/release.sh:56-59`; refusal messages reproduced in all three cases.
+
+### Command execution / privileged operations (release path) <!-- T3 -->
+
+- **Finding:** verified by execution. Refusals fire before any mutation: dirty tree, wrong branch, `main` ahead of/behind `origin/main`, missing `CHANGELOG.md` entry, and pre-existing `v1.0.0` each aborted with a specific message and left no tag, commit, or remote change. Re-running after a successful release refused with "Released versions are immutable". The happy path produced exactly the intended four artifacts: `v1.0.0` and `v1` at the same commit in the origin, an annotated tag whose message is the changelog entry, and a marketplace commit setting `version` 1.0.0 and `source.ref` `v1.0.0` with the file's key order and formatting preserved.
+- **References:** `scripts/release.sh:44-50`, `:64-77`, `:117-119`, `:135-140`, `:144-170`.
+
+### File I/O with user-controlled paths <!-- T3 -->
+
+- **Finding:** verified. The only writes outside the repo are into a `mktemp -d` directory removed by an `EXIT` trap; the manifest path is a constant joined to that directory, never derived from input. The manifest rewrite refuses (non-zero, no commit) if no plugin entry matches the name.
+- **References:** `scripts/release.sh:32-34`, `:145-163`.
+
+### External HTTP calls <!-- T1 -->
+
+- **Finding:** verified by unit test. HTTPS with default certificate verification, a 30 s timeout, and a 1 MB cap applied *before* parsing; oversize bodies are refused unparsed. Transport failure, HTTP error, oversize, and malformed JSON all return an error value rather than raising, and released mode downgrades an unreachable manifest to a note while still failing on a fetched-and-disagreeing one — confirmed by two tests asserting opposite outcomes for those two cases.
+- **References:** `scripts/check_release.py:129-147`, `:240-244`; `scripts/test_check_release.py` (`FetchManifest`, `test_unreachable_marketplace_warns_but_does_not_fail`, `test_disagreeing_marketplace_fails`).
+
+### CI / supply chain <!-- T3 -->
+
+- **Finding:** verified. The new `release` job runs `check_release.py` only, which performs no writes and needs no `permissions:` grant beyond the default read; no secret is referenced by any workflow in this repo. Drift detection was exercised end to end against the fixture: after a successful release the released-mode check reported consistent, and committing a change to `plugins/sdl/lib/validate.py` without releasing was reported as "1 shipped file(s) changed since v1.0.0 and are not released". Released mode runs on the daily schedule rather than on push — see the deadlock defect below.
+- **References:** `.github/workflows/self-check.yml` (`release` job, `schedule` trigger), `scripts/check_release.py:192-246`.
+
+### Defects found and fixed during review
+
+#### Release deadlock: green-CI precondition vs. released-mode check
+
+- **Finding:** released mode originally ran on every push to `main`. After a merge, the declared version has no tag yet, so the check failed and `main` went red — while `release.sh` refuses to release a commit whose checks are not green (SR-3). The two rules were mutually exclusive: every merge would have blocked the release that was supposed to follow it, and the only way out would have been `SDL_RELEASE_SKIP_CI=1` on every release, hollowing out the precondition. Found when walking the merge-to-release sequence end to end, after the tooling was otherwise complete.
+- **Fix:** released mode now runs only on `schedule` and `workflow_dispatch`. Between a merge and its release, every released-mode condition is transient by design (no tag, manifest not yet bumped, shipped files newer than the tag), so the check has nothing true to say until the release has happened. On the daily run, an outstanding release is a genuine signal. PR mode is unaffected and still gates every PR.
+- **References:** `.github/workflows/self-check.yml` (`release` job, `Released state is consistent` step condition and comment); `docs/releasing.md`, "What CI checks"; residual risk R5.
+
+#### Diff range: shipped-change detection
+
+- **Finding:** shipped-change detection originally used a two-dot diff (`base..HEAD`), which compares trees rather than the branch's own changes: any change `main` made to `plugins/sdl/` after the branch point would have been attributed to the PR, demanding a version bump for a diff that shipped nothing. Found while running PR mode against this branch, fixed to three-dot (matching `validate.py`), and regression-tested with a fixture where the base branch ships something after the branch point.
+- **References:** `scripts/check_release.py:114-121`; `scripts/test_check_release.py::PrMode::test_shipped_change_made_on_the_base_after_branching_is_not_ours`.
+
+**Not applicable (no code in these areas):** persistence/SQL, deserialization of untrusted formats, cryptography, authn/authz, secrets handling, logging/PII, frontend, native, dependency additions.
+
+## Static analysis and SBOM <!-- SVV-3, SM-9 -->
+
+- `shellcheck scripts/*.sh plugins/sdl/lib/*.sh` — clean (CI-enforced).
+- `python -m unittest discover -s scripts -p 'test_*.py'` — 34 tests, pass.
+- Existing suite `lib.test_validate lib.test_check_pins lib.test_new_cycle lib.test_gen_index` — 78 tests, pass; unaffected by this cycle.
+- `gen_index.py --check` — current. `plugin.json` and the marketplace manifest parse as JSON.
+- No dependency changes, no SBOM delta.
+
+## Residual risks <!-- DM-1 -->
+
+| ID  | Description | Severity | Disposition | Carry-forward target |
+|-----|-------------|----------|-------------|----------------------|
+| R1  | Releases are unsigned until the maintainer configures `user.signingkey`. `release.sh` warns and continues rather than blocking, so the attributability control that `baseline:B1` names as its revisit path is not yet in force. Setup is documented (`docs/releasing.md`, "Tag signing"). | medium | mitigate-later | verify at the next release that the tag is signed; make signing mandatory when a second maintainer joins |
+| R2  | The first release is the first real exercise of the procedure against GitHub: `gh api .../check-runs` output shape and `gh repo clone` behavior were verified against a stub, not the live API. A mismatch stops the release with an error; it cannot half-release, since the tag push precedes the manifest edit and each step is idempotent-by-refusal. | low | mitigate-later | confirm during the 1.0.0 release; fix forward if the API shape differs |
+| R3  | `plugin-self-adopt:R1` remains open and is retargeted from 0.7.0 to `v1.0.0`: the plugin-cache execution path has still never been exercised from a published release. This cycle changes what the marketplace serves (an immutable tag rather than `main`), so the untested path changed shape. | low | mitigate-later | the planned end-to-end test when the next repo is onboarded |
+| R4  | The Copilot/clone channel still tracks `main`, so those developers can run skills that no release has shipped. Accepted while that population is one or two people who update deliberately. | low | accept | revisit if the clone-based population grows; point `install.sh` at the latest tag |
+| R5  | "Merged but never released" is detected by the daily scheduled run rather than instantly, so shipped content can sit undelivered for up to a day before anything says so. This is the cost of the deadlock fix below; releasing immediately after merge is what actually prevents it. | low | accept | revisit if releases routinely lag merges — a scheduled run more than once a day is the cheap tightening |

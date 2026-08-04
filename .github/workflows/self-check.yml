@@ -3,6 +3,13 @@ on:
   pull_request:
   push:
     branches: [main]
+  # Daily: catches drift no push can catch — an action retagged upstream after
+  # we pinned it, and a marketplace manifest edited in its own repo. GitHub
+  # disables schedules after 60 days of repo inactivity; re-enable from the
+  # Actions tab if this repo ever goes that quiet.
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
 
 jobs:
   validator:
@@ -23,6 +30,36 @@ jobs:
         working-directory: plugins/sdl
       - name: INDEX.md is current
         run: python plugins/sdl/lib/gen_index.py --check
+
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.x'
+      - name: Unit tests
+        run: python -m unittest discover -v -s scripts -p 'test_*.py'
+      # On a PR: shipped content may not change without a version bump and a
+      # changelog entry.
+      - name: Version bump accompanies shipped changes
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          git fetch --quiet origin "$BASE_REF"
+          python scripts/check_release.py --mode pr --base "origin/$BASE_REF"
+      # Released-mode deliberately does NOT run on push to main. Between a
+      # merge and the release that follows it, every released-mode failure is
+      # transient by design (no tag yet, manifest not yet bumped) — and since
+      # release.sh refuses to release a commit whose checks are red, failing
+      # here would deadlock releases outright. On the daily run, a release
+      # still pending is a real signal.
+      - name: Released state is consistent
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: python scripts/check_release.py --mode released
 
   pins:
     runs-on: ubuntu-latest
@@ -65,7 +102,11 @@ jobs:
             plugins/sdl/templates/docs-sdl/04-verification.md \
             plugins/sdl/templates/docs-sdl/dep-update.md \
             .github/workflows/sdl-validate.yml \
+            CHANGELOG.md \
+            docs/releasing.md \
             scripts/install.sh \
+            scripts/release.sh \
+            scripts/check_release.py \
             scripts/sync-to-repo.sh \
             plugins/sdl/lib/sync_to_repo.sh \
             plugins/sdl/lib/validate.py \
