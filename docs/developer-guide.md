@@ -38,6 +38,8 @@ gh repo clone savioke/sdl ~/.sdl-governance
 
 The script symlinks skills into Copilot and also sets up Claude Code as above. To update: `cd ~/.sdl-governance && git pull` (Copilot sees it immediately; Claude Code still updates via `/plugin marketplace update relay`).
 
+If your clone predates 1.0.0, re-run `scripts/install.sh` once after that pull. Skills moved to `plugins/sdl/skills/`, so a symlink created earlier points at a path that no longer exists — Copilot loads no skills and says nothing about it. `ls -la ~/.copilot/skills/sdl` shows whether yours needs it.
+
 ## Per-repo setup (run once when a repo first adopts SDL)
 
 This step needs the clone (see "Copilot or other agents" above), even if you otherwise use only Claude Code:

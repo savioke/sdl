@@ -22,18 +22,7 @@ The repo must be public so consuming repos can resolve the reusable workflow and
 gh repo edit savioke/sdl --visibility public --accept-visibility-change-consequences
 ```
 
-That is the entire infrastructure setup — no keys, secrets, or access policy. The only remaining step is tagging a release.
-
-### Tag a release
-
-Project repos pin to a tagged ref of this repo (`@v1` in the reusable workflow). Cut the tag once the skills have been exercised on a real feature:
-
-```sh
-git tag -a v1 -m "v1: initial SDL governance release"
-git push origin v1
-```
-
-Subsequent breaking changes get `v2`, `v3`, etc. Non-breaking improvements move the existing tag forward (`git tag -f v1 && git push -f origin v1`) only if you're confident; otherwise, cut a new patch.
+That is the entire infrastructure setup — no keys, secrets, or access policy. The only remaining step is cutting a release, which is `scripts/release.sh` and is documented in `releasing.md`.
 
 ## Onboarding a new repo
 
@@ -67,17 +56,20 @@ gh repo clone savioke/sdl ~/.sdl-governance
 
 That symlinks skills into Copilot (`~/.copilot/skills/sdl`) and also registers the Claude Code marketplace. They update with `cd ~/.sdl-governance && git pull`; the symlink applies it to Copilot immediately.
 
+Anyone whose clone predates 1.0.0 must re-run `install.sh` once, not just pull: skills moved to `plugins/sdl/skills/` in the 1.0.0 release, and a symlink created before that move points at a path that no longer exists — Copilot then silently has no skills. `install.sh` repairs the link.
+
 ## Updating the validator or skills
 
-Skills and the validator are pulled live from this repo by all consumers (Claude Code via the marketplace, Copilot via clone symlinks, CI via `actions/checkout`). To ship a change:
+Full procedure and the compatibility contract: **`releasing.md`**. In short:
 
-1. Make the change on a branch in this repo. Bump `version` in `plugins/sdl/.claude-plugin/plugin.json` if the plugin content changed.
+1. Make the change on a branch, with its SDL cycle. In the same PR, bump `version` in `plugins/sdl/.claude-plugin/plugin.json` and add the matching `CHANGELOG.md` entry — CI fails the PR if shipped content changed without them.
 2. Open a PR. This repo runs its own SDL gate (`.github/workflows/sdl.yml`, self-referential at `@v1`) plus `self-check.yml` unit tests — but you are still the primary reviewer: single maintainer, no second human. Bad logic here breaks every other repo's CI, so self-review carefully.
 3. Merge to `main`.
-4. Move the appropriate version tag forward (or cut a new one) so consuming repos pick it up.
-5. If the plugin version changed, mirror it in the marketplace manifest (`.claude-plugin/marketplace.json` in `savioke/relay-plugin-marketplace`). Claude Code devs pick the change up on their next `/plugin marketplace update relay` either way — the plugin tracks `main` — but the version string is what they see in the plugin UI.
+4. Run `scripts/release.sh`. It tags `vX.Y.Z`, moves the `vX` alias consumers pin, and updates the marketplace manifest. Do it right after the merge, while you are still at the keyboard: **nothing goes red in the meantime.** Merging and forgetting is silent until the next daily `self-check` run (06:17 UTC), which is when a merged-but-unreleased state is reported. Releasing immediately is the control; the daily run is only the backstop. To check on demand, run the `self-check` workflow from the Actions tab, or `python scripts/check_release.py --mode released` locally.
 
-Consuming repos can pin a major version (`@v1`) and accept moving tags, or pin an exact tag (`@v1.2.0`) for stricter reproducibility. Default is `@v1` — see `plugins/sdl/templates/docs-sdl/...` and `scripts/sync-to-repo.sh` (the `SDL_REF` variable).
+   Released-mode checks deliberately do not run on push to `main` — between a merge and its release they are all transient, and failing there would block the very release that clears them. `releasing.md`, "What CI checks", has the reasoning; cycle `2026-08-03-release-process` records it as residual risk R5.
+
+Consuming repos default to the moving `@v1` and need no action per release; they can pin an exact tag (`@v1.2.3`) for stricter reproducibility or to hold still during an audit. See `scripts/sync-to-repo.sh` (the `SDL_REF` variable).
 
 ## Why this repo is public
 

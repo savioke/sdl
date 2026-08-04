@@ -128,6 +128,8 @@ Claude Code developers (the common case) need no clone: `/plugin marketplace add
 
 Updates: `cd ~/.sdl-governance && git pull`. Copilot sees the new version immediately (symlinked skills); Claude Code fetches the plugin from GitHub via the marketplace, so it needs `/plugin marketplace update relay` and a reload.
 
+Both channels are fed by tagged releases, not by `main`: consumer CI pins the moving `vX` alias, the marketplace manifest pins the immutable `vX.Y.Z`. Procedure and compatibility contract in `docs/releasing.md`.
+
 `scripts/sync-to-repo.sh <repo>` (run once per project repo):
 1. Copies `.github/workflows/sdl.yml`.
 2. Creates `docs/sdl/.gitkeep`.

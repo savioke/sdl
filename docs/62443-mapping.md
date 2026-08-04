@@ -16,7 +16,7 @@ IEC 62443-4-1 organizes requirements into eight practices:
 | SI       | Secure Implementation            | Full — `03-implementation.md`, `sdl-review` skill |
 | SVV      | Security Verification and Validation Testing | Full — `04-verification.md`, CI workflow |
 | DM       | Defect Management                | Partial — residual risks tracked, formal CVD process out of scope here |
-| SUM      | Security Update Management       | Out of scope for this repo (handled by ops/release) |
+| SUM      | Security Update Management       | Partial — for this repo as a product: `docs/releasing.md`, `CHANGELOG.md`, versioned releases. Update management for *governed* products stays with ops/release. |
 | SG       | Security Guidelines              | Out of scope for this repo (handled by product docs) |
 
 ## Field-level mapping
@@ -78,6 +78,18 @@ Each row links a specific 62443-4-1 requirement to where evidence lives.
 | DM-2  | Reviewing security-related issues  | `04-verification.md` "Residual risks" + PR review |
 | DM-3  | Assessing security-related issues  | "Severity" / "Disposition" columns in residual risks table |
 | DM-4  | Addressing security-related issues | Carry-forward mechanism resolved in subsequent cycles |
+
+### SUM — Security Update Management
+
+Applies to this repo as a product distributed to other teams; SUM for the products this program *governs* belongs to their own ops/release process.
+
+| Req   | Title                              | Evidence |
+|-------|------------------------------------|----------|
+| SUM-1 | Update qualification               | `self-check.yml` and this repo's own SDL gate must pass; `scripts/release.sh` refuses a commit whose checks are not green |
+| SUM-2 | Update documentation               | `CHANGELOG.md` entry per release, including breaking-change and upgrade notes |
+| SUM-3 | Dependent component updates        | `docs/dependency-updates.md`, `check_pins.py`, Dependabot |
+| SUM-4 | Security update delivery           | Signed immutable `vX.Y.Z` tags; the moving `vX` alias delivers to consumer CI with no action from them (`docs/releasing.md`) |
+| SUM-5 | Timely delivery of security patches | `check_release.py --mode released` fails `main` while a release is pending, so shipped changes cannot sit undelivered |
 
 ## Generating audit reports
 

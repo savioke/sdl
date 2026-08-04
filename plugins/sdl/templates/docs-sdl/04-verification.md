@@ -24,6 +24,14 @@
 
 **Not applicable (no code in these areas):** <comma-separated list of the categories that don't apply>
 
+## Defects found and fixed during review <!-- DM-1 -->
+
+<!-- OPTIONAL — omit the section entirely when there is nothing to record.
+     Only defects in a security control, or in a mitigation 02 claims. One to
+     three sentences each: what was wrong, what it allowed, what fixed it.
+     Anything else found during review is recorded by the commit that fixed it.
+     A concern investigated and found not to be a defect is not recorded here. -->
+
 ## Static analysis and SBOM <!-- SVV-3, SM-9 -->
 
 <!-- Existing tooling output relevant to this change. Flagged issues addressed. -->
