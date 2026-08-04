@@ -16,17 +16,17 @@ Mitigations were exercised, not just read: `release.sh` was run against a throwa
 ### Command execution / external inputs (new shell script) <!-- T2 -->
 
 - **Finding:** verified by execution. With `version` set to `1.0.0; touch /tmp/PWNED_BY_SDL`, the release aborted at the semver gate and the file was never created; `../../evil` and `1.0` were likewise refused before any git operation. The validated string is the only source of `$tag` and `$alias_tag`, the latter by parameter expansion rather than re-parsing.
-- **References:** `scripts/release.sh:56-59`; refusal messages reproduced in all three cases.
+- **References:** `scripts/release.sh:57-60`; refusal messages reproduced in all three cases.
 
 ### Command execution / privileged operations (release path) <!-- T3 -->
 
 - **Finding:** verified by execution. Refusals fire before any mutation: dirty tree, wrong branch, `main` ahead of/behind `origin/main`, missing `CHANGELOG.md` entry, and pre-existing `v1.0.0` each aborted with a specific message and left no tag, commit, or remote change. Re-running after a successful release refused with "Released versions are immutable". The happy path produced exactly the intended four artifacts: `v1.0.0` and `v1` at the same commit in the origin, an annotated tag whose message is the changelog entry, and a marketplace commit setting `version` 1.0.0 and `source.ref` `v1.0.0` with the file's key order and formatting preserved.
-- **References:** `scripts/release.sh:44-50`, `:64-77`, `:117-119`, `:135-140`, `:144-170`.
+- **References:** `scripts/release.sh:44-51`, `:65-78`, `:185-188`, `:204-209`, `:210-228`.
 
 ### File I/O with user-controlled paths <!-- T3 -->
 
 - **Finding:** verified. The only writes outside the repo are into a `mktemp -d` directory removed by an `EXIT` trap; the manifest path is a constant joined to that directory, never derived from input. The manifest rewrite refuses (non-zero, no commit) if no plugin entry matches the name.
-- **References:** `scripts/release.sh:32-34`, `:145-163`.
+- **References:** `scripts/release.sh:32-34`, `:143-144`, `:210-215`.
 
 ### External HTTP calls <!-- T1 -->
 
@@ -70,6 +70,13 @@ Mitigations were exercised, not just read: `release.sh` was run against a throwa
 - **Fix:** parse both sides once (`head_parsed`, `base_parsed`) and guard on `base_parsed is None`, which now covers "no `plugin.json`", "no version", and "version not orderable" identically — a note and a skipped increase check, per the reviewer's suggestion. The note names the offending value so the skip is not silent. The dead `new is None` branch is gone; an unparseable *head* version is still an error, since that is the author's own work.
 - **Verified:** the original reproduction now reports `no comparable version at main ('1.0'); skipping increase check` and exits 0. Negative-controlled — restoring the old condition makes all six subcases of the new test error with the original `TypeError`.
 - **References:** `scripts/check_release.py:181-214`; `scripts/test_check_release.py::PrMode::test_unorderable_base_version_skips_the_check_instead_of_crashing`, `::test_base_without_a_plugin_json_at_all_still_skips`, `::test_unparseable_head_version_is_still_an_error`.
+
+#### The marketplace manifest edit could strand a release past the point of no return (T3)
+
+- **Finding:** raised in PR review as a clarity issue — the rewrite assumed each `plugins[]` entry was an object and `entry["source"]` was absent or an object, so a malformed manifest would raise `AttributeError`/`TypeError` with little context. Investigating the consequence made it a correctness defect rather than a message-quality one: the rewrite was step 6, *after* step 5 had pushed `vX.Y.Z` and force-moved `vX`. Since `release.sh` refuses to re-release an existing immutable tag, a raise there left the release half-done — tags published, manifest untouched, and the script unable to run again. That also broke this script's own documented invariant, "all refusals happen before any mutation" (03, secure coding practices). A latent hole beyond the reported ones: `entry.setdefault("source", {})["ref"]` raises on an explicit `"source": null`, because the key exists and `setdefault` returns the `None`.
+- **Fix:** the parse, the type checks, and the entry lookup moved into a `manifest_py` shell function called in two modes, and the manifest is now cloned and validated at step 3 — before the CI check, before the confirmation prompt, and before any tag exists. `check` and `write` run identical validation, so a manifest that passes the preflight cannot fail the write for shape reasons. Checks: top level is an object, `plugins` is an array, exactly one entry matches the plugin name (zero lists the names that *were* found; more than one is refused rather than silently taking the first, as the old `break` did), and `source` is an object. A missing or null `source` is refused rather than synthesized — writing a bare `{"ref": …}` would publish a manifest that resolves to nothing. The step-7 failure message now names the exact manual repair and says not to re-run. The confirmation banner gained the manifest's current version and ref, so the change is visible before it is approved.
+- **Verified by execution.** A fixture (bare origin, fake marketplace repo, stubbed `gh`) ran eleven malformed manifests — string/null/missing/list `source`, non-array `plugins`, missing `plugins`, array top level, non-object entries, no matching plugin, duplicate entries, invalid JSON — plus the happy path. Every refusal aborted with **no tag in the origin**, and the happy path produced both tags and a correctly rewritten manifest with key order and formatting preserved. Negative-controlled: with the preflight removed, all eleven push `v1.0.0` and `v1` and *then* fail, reproducing the stranded state exactly.
+- **References:** `scripts/release.sh:79-144` (preflight and `manifest_py`), `:210-215` (write, with the recovery message); `docs/releasing.md`, "What the script does".
 
 **Not applicable (no code in these areas):** persistence/SQL, deserialization of untrusted formats, cryptography, authn/authz, secrets handling, logging/PII, frontend, native, dependency additions.
 

@@ -3,7 +3,8 @@
 #
 # Reads the version from plugins/sdl/.claude-plugin/plugin.json (bumped in the
 # change PR, not here), then:
-#   1. verifies main is clean, pushed, and green
+#   1. verifies main is clean, pushed, and green, and that the marketplace
+#      manifest is present and safe to edit
 #   2. creates the immutable annotated tag vX.Y.Z (signed when a key is set up)
 #   3. force-moves the vX alias that consumer CI pins
 #   4. points the marketplace manifest at that exact tag
@@ -76,7 +77,74 @@ if git rev-parse -q --verify "refs/tags/$tag" >/dev/null || \
   die "$tag already exists. Released versions are immutable — bump the version in a PR instead."
 fi
 
-# --- 3. CI must be green ----------------------------------------------------
+# --- 3. Marketplace manifest: read and validate -----------------------------
+#
+# The manifest edit is the last step of a release, but it is validated here,
+# before anything irreversible happens. A manifest we cannot safely edit must
+# refuse the release outright rather than surface after the tags are pushed:
+# vX.Y.Z is immutable, so a failure at step 7 would strand the release with no
+# way to re-run. Same invariant as every other check in this script — all
+# refusals happen before any mutation.
+#
+# manifest_py runs the identical parse and validation in both modes, so a
+# manifest that passes 'check' here cannot fail 'write' later for shape reasons.
+manifest_py() {
+  python3 - "$1" "$2" "$PLUGIN_NAME" "$version" "$tag" <<'PY'
+import json, sys
+path, mode, plugin, version, tag = sys.argv[1:6]
+
+
+def die(msg):
+    sys.exit(f"{path}: {msg}")
+
+
+try:
+    with open(path, encoding="utf-8") as fh:
+        manifest = json.load(fh)
+except OSError as e:
+    die(f"cannot be read ({e.strerror})")
+except ValueError as e:
+    die(f"is not valid JSON ({e})")
+
+if not isinstance(manifest, dict):
+    die(f"top level is {type(manifest).__name__}, expected an object")
+plugins = manifest.get("plugins")
+if not isinstance(plugins, list):
+    die(f"`plugins` is {type(plugins).__name__}, expected an array")
+
+matches = [e for e in plugins if isinstance(e, dict) and e.get("name") == plugin]
+if not matches:
+    names = [repr(e.get("name")) for e in plugins if isinstance(e, dict)]
+    die(f"no plugin named {plugin!r} (entries: {', '.join(names) or 'none'})")
+if len(matches) > 1:
+    die(f"{len(matches)} entries named {plugin!r}; expected exactly one")
+
+entry = matches[0]
+source = entry.get("source")
+if not isinstance(source, dict):
+    # Never synthesized: an entry without a source object is malformed, and
+    # writing a bare {"ref": ...} would push a manifest that resolves to nothing.
+    die(f"plugin {plugin!r} has a {type(source).__name__} `source`, expected an "
+        f"object — fix the manifest by hand, then re-run")
+
+if mode == "check":
+    print(f"{entry.get('version')!r} / {source.get('ref')!r}")
+    sys.exit(0)
+
+entry["version"] = version
+source["ref"] = tag
+with open(path, "w", encoding="utf-8") as fh:
+    json.dump(manifest, fh, indent=2)
+    fh.write("\n")
+PY
+}
+
+log "Reading $MARKETPLACE_REPO"
+tmpdir="$(mktemp -d)"
+gh repo clone "$MARKETPLACE_REPO" "$tmpdir" -- --quiet --depth 1
+manifest_now="$(manifest_py "$tmpdir/$MANIFEST_PATH" check)" || exit 1
+
+# --- 4. CI must be green ----------------------------------------------------
 
 sha="$(git rev-parse HEAD)"
 slug="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
@@ -99,7 +167,7 @@ else
   log "All checks green"
 fi
 
-# --- 4. Confirm -------------------------------------------------------------
+# --- 5. Confirm -------------------------------------------------------------
 
 cat <<EOF
 
@@ -108,7 +176,8 @@ Release $tag from ${sha:0:9} ($slug)
   create tag        $tag              (immutable, annotated)
   move alias        $alias_tag  -> ${sha:0:9}   (consumer CI pins this)
   marketplace       $MARKETPLACE_REPO
-                    version -> $version, source.ref -> $tag
+                    now $manifest_now
+                    -> '$version' / '$tag'
 
 Changelog:
 $(printf '%s\n' "$notes" | sed 's/^/  /')
@@ -119,7 +188,7 @@ if [[ "${SDL_RELEASE_YES:-}" != "1" ]]; then
   [[ "$reply" == "y" || "$reply" == "Y" ]] || die "Aborted."
 fi
 
-# --- 5. Tag and push --------------------------------------------------------
+# --- 6. Tag and push --------------------------------------------------------
 
 if [[ -n "$(git config --get user.signingkey || true)" ]]; then
   sign_flag="-s"
@@ -139,27 +208,17 @@ log "Moving $alias_tag"
 git tag -f "$sign_flag" -m "$alias_tag -> $tag" "$alias_tag" >/dev/null
 git push --quiet --force origin "refs/tags/$alias_tag"
 
-# --- 6. Marketplace manifest ------------------------------------------------
+# --- 7. Marketplace manifest ------------------------------------------------
 
+# Validated at step 3 against this same clone, so the only ways this can fail
+# now are transient (the remote changed under us, or the disk did) — and the
+# message says which, because the tags are already out and cannot be recut.
 log "Updating $MARKETPLACE_REPO"
-tmpdir="$(mktemp -d)"
-gh repo clone "$MARKETPLACE_REPO" "$tmpdir" -- --quiet --depth 1
-python3 - "$tmpdir/$MANIFEST_PATH" "$PLUGIN_NAME" "$version" "$tag" <<'PY'
-import json, sys
-path, plugin, version, tag = sys.argv[1:5]
-with open(path, encoding="utf-8") as fh:
-    manifest = json.load(fh)
-for entry in manifest.get("plugins", []):
-    if entry.get("name") == plugin:
-        entry["version"] = version
-        entry.setdefault("source", {})["ref"] = tag
-        break
-else:
-    sys.exit(f"no plugin named {plugin!r} in {path}")
-with open(path, "w", encoding="utf-8") as fh:
-    json.dump(manifest, fh, indent=2)
-    fh.write("\n")
-PY
+manifest_py "$tmpdir/$MANIFEST_PATH" write || die \
+  "$tag and $alias_tag are pushed, but the manifest edit failed. Fix
+   $MARKETPLACE_REPO/$MANIFEST_PATH by hand: set the $PLUGIN_NAME entry to
+   version '$version' and source.ref '$tag'. Do not re-run this script — the
+   tags are correct and $tag is immutable."
 
 if [[ -z "$(git -C "$tmpdir" status --porcelain)" ]]; then
   log "Manifest already at $version / $tag — nothing to commit"
@@ -169,7 +228,7 @@ else
   log "Manifest updated"
 fi
 
-# --- 7. Verify --------------------------------------------------------------
+# --- 8. Verify --------------------------------------------------------------
 
 # Local-only: raw.githubusercontent caches the manifest for a few minutes, so
 # the marketplace half is verified by this repo's CI on the next push.

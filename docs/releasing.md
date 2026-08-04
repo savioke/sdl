@@ -24,12 +24,14 @@ If the PR touches nothing under `plugins/sdl/` or `.github/workflows/sdl-validat
 
 ## What the script does
 
-1. Refuses unless: you are on `main`, the tree is clean, `main` matches `origin/main`, the version is `X.Y.Z`, `CHANGELOG.md` has an entry for it, that version has never been tagged, and every check on the commit is green.
-2. Shows you the plan and asks once.
+1. Refuses unless: you are on `main`, the tree is clean, `main` matches `origin/main`, the version is `X.Y.Z`, `CHANGELOG.md` has an entry for it, that version has never been tagged, the marketplace manifest is readable and has exactly one editable `sdl` entry, and every check on the commit is green.
+2. Shows you the plan — including what the manifest says now — and asks once.
 3. Creates the annotated, signed tag `vX.Y.Z`, using your changelog entry as the message.
 4. Force-moves the `vX` alias to the same commit.
 5. Points the marketplace manifest at `vX.Y.Z`.
 6. Re-verifies the result locally.
+
+Every refusal in step 1 happens before anything is pushed, including the manifest check — the manifest is read and validated up front even though it is written last. Once `vX.Y.Z` exists it cannot be recut, so a problem discovered after the tags were pushed would leave you with no way to re-run.
 
 Released tags are never rewritten. If `v1.2.3` is wrong, release `v1.2.4`.
 
