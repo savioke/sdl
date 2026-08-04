@@ -14,7 +14,7 @@ Central tools repo for our IEC 62443-4-1 aligned Secure Software Development Lif
 
 ## Install (per developer, once)
 
-**Claude Code*:
+**Claude Code**:
 
 ```
 /plugin marketplace add savioke/relay-plugin-marketplace
