@@ -10,6 +10,33 @@ for the compatibility contract and the release procedure.
 Versions are the plugin's (`plugins/sdl/.claude-plugin/plugin.json`); each is
 tagged `vX.Y.Z` and, for the current major, aliased by `vX`.
 
+## 1.0.1 — 2026-08-04
+
+**Not breaking.** Removes gate runs that never validated anything; no PR outcome changes.
+
+### Gate (reaches consumer CI via `@v1`)
+
+- The generated `sdl.yml` now filters its `push` trigger to `main`. It was
+  `on: [pull_request, push]`, which also fires on **tag** pushes — where the
+  validator has nothing to say, because it diffs against `origin/main`. A release
+  tag produced an empty diff and a vacuous pass; a tag cut anywhere else would
+  demand an SDL cycle for a push that changed no code.
+
+### Upgrading
+
+- **Consumer repos:** `sdl.yml` was written into your repo at onboarding and is
+  yours, so this release does not change it. Apply the same two-line edit to stop
+  the spurious runs — or re-run `sync-to-repo.sh` after deleting the file:
+
+  ```yaml
+  on:
+    pull_request:
+    push:
+      branches: [main]
+  ```
+
+- **Claude Code:** `/plugin marketplace update relay`, then reload.
+
 ## 1.0.0 — 2026-08-04
 
 First release under the versioning contract in `docs/releasing.md`, and the

@@ -17,3 +17,4 @@
 | 2026-07-10-plugin-self-adopt | plugin-self-adopt | — | review | 2026-07-10 | Make the Claude Code plugin self-sufficient for repo adoption. |
 | 2026-08-03-bump-setup-python-v7 | bump-setup-python-v7 | — | review | 2026-08-03 | Dependabot's grouped actions PR bumps the two SHA-pinned GitHub Actions in this repo's workflows: `actions/setup-python` v6.3.0 → **v7.0.0** (major) and `actions/checkout` v7.0.0 → v7.0.1 (patch). |
 | 2026-08-03-release-process | release-process | — | review | 2026-08-03 | Define and mechanize one release process for this repo, replacing a per-release judgment call — the previous guidance was to move the tag forward "only if you're confident" — with one procedure that is the same every time. |
+| 2026-08-04-fix-gate-tag-triggers | fix-gate-tag-triggers | — | review | 2026-08-04 | The SDL gate workflow generated for every participating repo declares `on: [pull_request, push]`. |
