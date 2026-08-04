@@ -180,7 +180,8 @@ def check_pr(repo: Path, base: str, plugin: str) -> tuple[list[str], list[str]]:
 
     head_text = (repo / PLUGIN_JSON).read_text(encoding="utf-8")
     head_version = version_from_plugin_json(head_text)
-    if head_version is None or parse_semver(head_version) is None:
+    head_parsed = parse_semver(head_version) if head_version is not None else None
+    if head_parsed is None:
         return ([f"{PLUGIN_JSON}: version is missing or not X.Y.Z"], notes)
 
     if not git_ok("rev-parse", "--verify", f"{base}^{{commit}}", repo=repo):
@@ -194,19 +195,23 @@ def check_pr(repo: Path, base: str, plugin: str) -> tuple[list[str], list[str]]:
 
     base_text = file_at_rev(repo, base, PLUGIN_JSON)
     base_version = version_from_plugin_json(base_text) if base_text else None
+    base_parsed = parse_semver(base_version) if base_version is not None else None
     notes.append(f"{len(changed)} shipped file(s) changed vs {base}")
 
-    if base_version is None:
-        notes.append(f"no parseable version at {base}; skipping increase check")
-    else:
-        new, old = parse_semver(head_version), parse_semver(base_version)
-        if new is None:
-            errors.append(f"{PLUGIN_JSON}: version {head_version!r} is not X.Y.Z")
-        elif new <= old:
-            errors.append(
-                f"shipped content changed but version did not increase "
-                f"({base_version} -> {head_version}). Bump it in this PR and add a "
-                f"CHANGELOG entry — see docs/releasing.md")
+    # Only the base side can be unusable here — the head version was parsed
+    # above and the function returned if it failed. A base with no version, or
+    # one we cannot order against (`1.0`, `1.0.0-rc1`, `v1.0.0`), is history the
+    # PR author did not write and is not evidence of a missing bump: note it and
+    # skip, exactly as for a base with no plugin.json at all. Crashing here
+    # would fail the PR with a traceback in place of an actionable message.
+    if base_parsed is None:
+        notes.append(f"no comparable version at {base} ({base_version!r}); "
+                     f"skipping increase check")
+    elif head_parsed <= base_parsed:
+        errors.append(
+            f"shipped content changed but version did not increase "
+            f"({base_version} -> {head_version}). Bump it in this PR and add a "
+            f"CHANGELOG entry — see docs/releasing.md")
 
     changelog = repo / CHANGELOG
     if not changelog.is_file():

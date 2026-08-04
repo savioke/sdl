@@ -358,6 +358,46 @@ class PrMode(GitFixture):
         errors, _ = cr.check_pr(self.repo, "base", "sdl")
         self.assertTrue(any("version did not increase" in e for e in errors))
 
+    def test_unorderable_base_version_skips_the_check_instead_of_crashing(self):
+        # The base is history the PR author did not write. A version that is
+        # present but not orderable must be noted and skipped, the same as a
+        # base with no plugin.json — not raise out of a required check.
+        for bad in ("1.0", "1.0.0-rc1", "v1.0.0", "1.0.0.1", "", "latest"):
+            with self.subTest(base_version=bad):
+                self.git("checkout", "-q", "base")
+                self.write_version(bad)
+                self.commit(f"base at {bad!r}")
+                self.git("checkout", "-q", "main")
+                (self.repo / "plugins/sdl/lib").mkdir(parents=True, exist_ok=True)
+                (self.repo / "plugins/sdl/lib/validate.py").write_text(f"print({bad!r})\n")
+                self.write_version("1.1.0")
+                self.add_changelog("1.1.0")
+                self.commit("ship against an unorderable base")
+                errors, notes = cr.check_pr(self.repo, "base", "sdl")
+                self.assertEqual(errors, [])
+                self.assertTrue(any("skipping increase check" in n for n in notes))
+
+    def test_base_without_a_plugin_json_at_all_still_skips(self):
+        self.git("checkout", "-q", "base")
+        (self.repo / cr.PLUGIN_JSON).unlink()
+        self.commit("base predates the plugin")
+        self.git("checkout", "-q", "main")
+        (self.repo / "plugins/sdl/lib").mkdir(parents=True)
+        (self.repo / "plugins/sdl/lib/validate.py").write_text("print(1)\n")
+        self.commit("ship")
+        errors, notes = cr.check_pr(self.repo, "base", "sdl")
+        self.assertEqual(errors, [])
+        self.assertTrue(any("skipping increase check" in n for n in notes))
+
+    def test_unparseable_head_version_is_still_an_error(self):
+        # The head side is the PR author's own work — that one must fail.
+        for bad in ("1.0", "1.0.0-rc1", "", "latest"):
+            with self.subTest(head_version=bad):
+                self.write_version(bad)
+                self.commit(f"head at {bad!r}")
+                errors, _ = cr.check_pr(self.repo, "base", "sdl")
+                self.assertTrue(any("not X.Y.Z" in e for e in errors))
+
     def test_docs_only_pr_needs_no_bump(self):
         (self.repo / "docs").mkdir()
         (self.repo / "docs/x.md").write_text("prose\n")

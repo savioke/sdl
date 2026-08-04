@@ -64,12 +64,19 @@ Mitigations were exercised, not just read: `release.sh` was run against a throwa
 - **Fix:** discriminate on `fetch_error is not None` instead. The value and the error are now independent, so a `null` body reaches `check_manifest` and is reported as drift, while a genuine fetch failure is still only a note. Two tests assert the opposite outcomes.
 - **References:** `scripts/check_release.py:268-275`; `scripts/test_check_release.py::ReleasedMode::test_a_manifest_body_of_literal_null_is_drift_not_an_outage`, `::test_a_genuine_fetch_failure_is_still_only_a_note`.
 
+#### PR mode crashed on a base version that is present but not orderable
+
+- **Finding:** raised in PR review, reproduced against a scratch repo. In `check_pr`, `base_version is None` was the only guard before `new <= old`, so a base whose `plugin.json` declared a version that exists but does not parse (`1.0`, `1.0.0-rc1`, `v1.0.0`, `latest`) made `old` `None` and raised `TypeError: '<=' not supported between instances of 'tuple' and 'NoneType'`. The guard that *was* there — `if new is None` — was dead code: the head version is parsed and returned on at the top of the function, so `new` could never be `None`. The check guarded the operand that was already safe and left the reachable one open. Impact is a required PR check failing with a traceback instead of an actionable message, on a diff whose author did not write the offending history; the likely trigger is a base branch predating strict versioning, i.e. exactly the onboarding case.
+- **Fix:** parse both sides once (`head_parsed`, `base_parsed`) and guard on `base_parsed is None`, which now covers "no `plugin.json`", "no version", and "version not orderable" identically — a note and a skipped increase check, per the reviewer's suggestion. The note names the offending value so the skip is not silent. The dead `new is None` branch is gone; an unparseable *head* version is still an error, since that is the author's own work.
+- **Verified:** the original reproduction now reports `no comparable version at main ('1.0'); skipping increase check` and exits 0. Negative-controlled — restoring the old condition makes all six subcases of the new test error with the original `TypeError`.
+- **References:** `scripts/check_release.py:181-214`; `scripts/test_check_release.py::PrMode::test_unorderable_base_version_skips_the_check_instead_of_crashing`, `::test_base_without_a_plugin_json_at_all_still_skips`, `::test_unparseable_head_version_is_still_an_error`.
+
 **Not applicable (no code in these areas):** persistence/SQL, deserialization of untrusted formats, cryptography, authn/authz, secrets handling, logging/PII, frontend, native, dependency additions.
 
 ## Static analysis and SBOM <!-- SVV-3, SM-9 -->
 
 - `shellcheck scripts/*.sh plugins/sdl/lib/*.sh` — clean (CI-enforced).
-- `python -m unittest discover -s scripts -p 'test_*.py'` — 44 tests, pass.
+- `python -m unittest discover -s scripts -p 'test_*.py'` — 47 tests, pass.
 - Existing suite `lib.test_validate lib.test_check_pins lib.test_new_cycle lib.test_gen_index` — 78 tests, pass; unaffected by this cycle.
 - `gen_index.py --check` — current. `plugin.json` and the marketplace manifest parse as JSON.
 - No dependency changes, no SBOM delta.
