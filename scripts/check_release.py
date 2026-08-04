@@ -75,15 +75,27 @@ def changelog_has_entry(text: str, version: str) -> bool:
     return bool(pattern.search(text))
 
 
-def manifest_entry(manifest: dict, plugin: str) -> dict | None:
-    for entry in manifest.get("plugins", []):
+def manifest_entry(manifest: object, plugin: str) -> dict | None:
+    if not isinstance(manifest, dict):
+        return None
+    plugins = manifest.get("plugins")
+    if not isinstance(plugins, list):
+        return None
+    for entry in plugins:
         if isinstance(entry, dict) and entry.get("name") == plugin:
             return entry
     return None
 
 
-def check_manifest(manifest: dict, plugin: str, version: str) -> list[str]:
-    """Errors describing how the fetched manifest disagrees with this version."""
+def check_manifest(manifest: object, plugin: str, version: str) -> list[str]:
+    """Errors describing how the fetched manifest disagrees with this version.
+
+    The manifest comes from another repo over the network, so nothing about its
+    shape is guaranteed. Type-check before every access: a manifest we cannot
+    read is drift to report, not a traceback out of the daily job.
+    """
+    if not isinstance(manifest, dict) or not isinstance(manifest.get("plugins"), list):
+        return ["marketplace manifest is not an object with a `plugins` array"]
     entry = manifest_entry(manifest, plugin)
     if entry is None:
         return [f"marketplace manifest has no plugin named {plugin!r}"]
@@ -92,11 +104,20 @@ def check_manifest(manifest: dict, plugin: str, version: str) -> list[str]:
     if declared != version:
         errors.append(
             f"marketplace manifest declares {plugin} {declared!r}, repo says {version!r}")
-    ref = (entry.get("source") or {}).get("ref")
+    # `source` is an object in the git-subdir form this plugin uses, but the
+    # marketplace schema also allows a bare URL string, so a non-object here is
+    # a real shape we must report rather than assume away.
+    source = entry.get("source")
     expected = f"v{version}"
-    if ref != expected:
+    if not isinstance(source, dict):
         errors.append(
-            f"marketplace manifest pins source.ref {ref!r}, expected {expected!r} "
+            f"marketplace manifest gives {plugin} a non-object `source` "
+            f"({type(source).__name__}); expected an object pinning ref {expected!r} "
+            f"(a release must be reachable at exactly one immutable tag)")
+    elif source.get("ref") != expected:
+        errors.append(
+            f"marketplace manifest pins source.ref {source.get('ref')!r}, "
+            f"expected {expected!r} "
             f"(a release must be reachable at exactly one immutable tag)")
     return errors
 
@@ -126,9 +147,13 @@ def file_at_rev(repo: Path, rev: str, path: str) -> str | None:
         return None
 
 
-def fetch_manifest(repo_slug: str, timeout: int = 30) -> tuple[dict | None, str | None]:
+def fetch_manifest(repo_slug: str, timeout: int = 30) -> tuple[object, str | None]:
     """Returns (manifest, error). A network failure is an availability problem,
-    not evidence of drift — the caller warns rather than failing (SR-8)."""
+    not evidence of drift — the caller warns rather than failing (SR-8).
+
+    The manifest is whatever the responder served, so it is typed `object`, not
+    `dict`: valid JSON is not necessarily an object. `check_manifest` is
+    responsible for every type check past this point."""
     url = f"https://raw.githubusercontent.com/{repo_slug}/main/{MARKETPLACE_PATH}"
     req = urllib.request.Request(url, headers={"User-Agent": "sdl-check-release"})
     try:
@@ -238,7 +263,9 @@ def check_released(repo: Path, plugin: str, marketplace_repo: str,
         return (errors, notes)
 
     manifest, fetch_error = fetch_manifest(marketplace_repo)
-    if manifest is None:
+    # Discriminate on the error, not on `manifest is None`: a body of literal
+    # `null` parses to None and is drift, not an outage.
+    if fetch_error is not None:
         notes.append(f"marketplace manifest unreachable, not checked: {fetch_error}")
     else:
         errors.extend(check_manifest(manifest, plugin, version))

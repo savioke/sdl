@@ -88,6 +88,57 @@ class ManifestCheck(unittest.TestCase):
         self.assertIn("no plugin named", errs[0])
 
 
+class MalformedManifest(unittest.TestCase):
+    """The manifest is fetched from another repo, so its shape is untrusted.
+    Every case here must be reported as drift; none may raise."""
+
+    def check(self, doc):
+        errs = cr.check_manifest(doc, "sdl", "1.0.0")
+        self.assertTrue(errs, f"expected drift for {doc!r}")
+        return errs
+
+    def test_source_as_a_bare_url_string(self):
+        # The marketplace schema allows a string source. It carries no ref, so
+        # it cannot satisfy the immutable-tag rule — but it must not crash.
+        doc = manifest()
+        doc["plugins"][0]["source"] = "https://github.com/savioke/sdl"
+        errs = self.check(doc)
+        self.assertTrue(any("non-object `source`" in e and "str" in e for e in errs))
+
+    def test_source_of_other_scalar_types(self):
+        for bad in (None, 7, True, ["v1.0.0"], []):
+            with self.subTest(source=bad):
+                doc = manifest()
+                doc["plugins"][0]["source"] = bad
+                self.assertTrue(any("non-object `source`" in e for e in self.check(doc)))
+
+    def test_source_missing_entirely(self):
+        doc = manifest()
+        del doc["plugins"][0]["source"]
+        self.assertTrue(any("non-object `source`" in e for e in self.check(doc)))
+
+    def test_top_level_is_not_an_object(self):
+        for bad in ([], "sdl", 7, None, True):
+            with self.subTest(manifest=bad):
+                errs = self.check(bad)
+                self.assertIn("not an object with a `plugins` array", errs[0])
+
+    def test_plugins_is_not_a_list(self):
+        for bad in ({"sdl": {}}, "sdl", 7, None):
+            with self.subTest(plugins=bad):
+                errs = self.check({"plugins": bad})
+                self.assertIn("not an object with a `plugins` array", errs[0])
+
+    def test_plugins_list_holding_non_objects(self):
+        errs = self.check({"plugins": ["sdl", 7, None, ["sdl"]]})
+        self.assertIn("no plugin named", errs[0])
+
+    def test_version_of_a_non_string_type(self):
+        doc = manifest()
+        doc["plugins"][0]["version"] = {"major": 1}
+        self.assertTrue(any("repo says '1.0.0'" in e for e in self.check(doc)))
+
+
 class FakeResponse:
     def __init__(self, body: bytes):
         self.body = body
@@ -205,6 +256,23 @@ class ReleasedMode(GitFixture):
         self.commit("change a skill without releasing")
         errors, _ = self.released()
         self.assertTrue(any("not released" in e for e in errors))
+
+    def test_a_manifest_body_of_literal_null_is_drift_not_an_outage(self):
+        # json.loads("null") is None. Discriminating on the manifest value
+        # rather than the fetch error would file this as "unreachable" and
+        # silently skip the comparison it exists to make.
+        self.tag_release()
+        with mock.patch.object(cr, "fetch_manifest", return_value=(None, None)):
+            errors, notes = self.released(offline=False)
+        self.assertTrue(any("not an object with a `plugins` array" in e for e in errors))
+        self.assertFalse(any("unreachable" in n for n in notes))
+
+    def test_a_genuine_fetch_failure_is_still_only_a_note(self):
+        self.tag_release()
+        with mock.patch.object(cr, "fetch_manifest", return_value=(None, "HTTP 503")):
+            errors, notes = self.released(offline=False)
+        self.assertEqual(errors, [])
+        self.assertTrue(any("unreachable" in n and "HTTP 503" in n for n in notes))
 
     def test_docs_only_change_after_a_release_is_fine(self):
         self.tag_release()
