@@ -20,6 +20,7 @@ In scope:
 - Marketplace manifest: `version` 1.0.0 and `source.ref` pinned to `v1.0.0` — applied to `savioke/relay-plugin-marketplace` by `release.sh`, not by hand.
 - Correcting the upgrade instructions that tell clone-based developers a `git pull` is sufficient — it no longer is, since `2026-07-09-split-marketplace` moved `skills/` under `plugins/sdl/`.
 - `docs/62443-mapping.md`: SUM moves from out-of-scope to in-scope for this repo.
+- Added during PR review: a "Proportionality" section in the `sdl-review` skill and a constrained "Defects found" section in the `04-verification.md` template. Both are agent-executable instructions (`baseline:B2`) and so are gated as code. The trigger was this cycle's own review producing paragraph-length entries for non-security defects; the standard now says only defects in a security control belong in the artifacts, because non-security content buries the signal an auditor comes here for.
 
 Out of scope:
 

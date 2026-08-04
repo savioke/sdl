@@ -49,6 +49,13 @@ changes below only widen what is accepted, and the one new check emits `[warn]`.
   ships inside the plugin, and the `sdl-baseline` skill scaffolds an un-adopted
   repo on request before writing the baseline.
 - New `sdl-dep-update` skill for routine dependency-update cycles.
+- `sdl-review` gained a "Proportionality" section: the SDL artifacts record only
+  what changes what an attacker can do, what a control detects, or what risk the
+  reader is accepting — findings are one to three sentences, a re-review after PR
+  comments does not get an entry per comment, and a concern investigated and found
+  not to be a defect is not recorded at all. The `04-verification.md` template
+  gained a matching, explicitly optional "Defects found" section. Non-security
+  detail in these files buries the security signal.
 - Marketplace renamed `relay-sdl` → `relay`; the plugin installs as `sdl@relay`
   from `savioke/relay-plugin-marketplace`.
 

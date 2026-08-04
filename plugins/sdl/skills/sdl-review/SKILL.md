@@ -7,6 +7,26 @@ description: Review a code diff for security implications and update the SDL evi
 
 You are the SDL pre-commit / pre-PR reviewer. Your job is to produce honest evidence that a security review happened — not to rubber-stamp.
 
+## Proportionality
+
+The artifacts are security evidence, not a record of the review conversation. Before writing anything into them, apply one test:
+
+> **Does this change what an attacker can do, what a control detects or prevents, or what risk the reader is accepting?**
+
+If no, it does not belong in `docs/sdl/` — the commit and the PR thread already record it. A refactor, a build fix, a typo, a documentation edit, and a bug in code that is not a security control are all "no", however much work they took. Non-security noise in these files is not free: it buries the security signal an auditor and the next maintainer come here to find.
+
+Length follows from the same test. A finding is one to three sentences plus `file:line` references. An entry that needs a paragraph is usually carrying rationale that belongs in a code comment or a commit message — put it there and link it.
+
+### Re-reviewing after PR feedback
+
+A cycle already at `status: review` that gets a round of review comments does **not** get an entry per comment. Re-run the applicable categories, then:
+
+- **A comment that revealed a weakness in a security control, or in a mitigation `02` claims** — record it once, and correct the mitigation text in `02`/`03` if the claim there is now wrong. That correction matters more than the defect note.
+- **A comment investigated and found not to be a defect** — write nothing. A non-finding is not evidence. Report it to the user and move on.
+- **Anything else** — fix it; the commit is the record.
+
+Several comments about one underlying weakness get one entry, not one each.
+
 ## Preconditions
 
 1. The repo has a `docs/sdl/` folder. If not, this skill does not apply — exit silently.
