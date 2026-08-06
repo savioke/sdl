@@ -10,6 +10,42 @@ for the compatibility contract and the release procedure.
 Versions are the plugin's (`plugins/sdl/.claude-plugin/plugin.json`); each is
 tagged `vX.Y.Z` and, for the current major, aliased by `vX`.
 
+## 1.2.0 — 2026-08-06
+
+**Not breaking.** The gate is untouched — no PR that passed before fails now.
+
+### Skills
+
+- **`sdl-dep-update` runs detached, on a smaller model.** New frontmatter
+  (`context: fork`, `background: true`, `model: sonnet`) hands the routine-tier
+  record to its own subagent instead of expanding it into your conversation. You
+  get a task notification when it lands, and the primary model's context is never
+  spent on a lockfile bump — which was most of what made the cheapest tier of
+  work feel expensive.
+
+  The fork starts from a fresh context. That suits this skill: every box it
+  checks has to be re-derived from the diff and the tooling rather than inherited
+  from whatever the main conversation happened to remember, which is what the
+  record already claims when it says the checks were verified this session.
+
+  Two instructions changed to match. The skill now closes with an explicit report
+  step, because nobody watched it work; and an escalation trigger stops and names
+  `sdl-spec` rather than trying to run an interview from a detached agent.
+
+- Skill runners ignore frontmatter keys they don't recognize, so this is inert
+  outside Claude Code — verified against Codex and Antigravity, which both load
+  the same `SKILL.md` and will keep running it inline on whatever model is
+  driving. Their own subagent and model-selection mechanisms live outside
+  `SKILL.md` (Codex uses TOML agent profiles), so there is no portable spelling
+  of this to reach for.
+
+### Upgrading
+
+- **Consumer repos:** nothing to do; the gate did not change.
+- **Claude Code:** `/plugin marketplace update relay`, then reload. Dependency
+  update records now arrive as a background task notification instead of inline
+  output. Read the record before you push, same as always.
+
 ## 1.1.0 — 2026-08-04
 
 **Not breaking.** Only widens what passes: an adoption PR that failed the gate
