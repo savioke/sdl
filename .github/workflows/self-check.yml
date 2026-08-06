@@ -21,12 +21,18 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.x'
-      - name: Validator imports and runs
+      - name: Tools import and run
         run: |
-          python -c "import ast; ast.parse(open('plugins/sdl/lib/validate.py').read())"
-          python plugins/sdl/lib/validate.py --help
+          for f in plugins/sdl/lib/*.py; do
+            python -c "import ast,sys; ast.parse(open(sys.argv[1]).read())" "$f"
+          done
+          for t in validate check_pins new_cycle gen_index dep_facts open_risks cycle_stamp; do
+            python "plugins/sdl/lib/$t.py" --help > /dev/null
+          done
       - name: Unit tests
-        run: python -m unittest -v lib.test_validate lib.test_check_pins lib.test_new_cycle lib.test_gen_index
+        # Discovery rather than a hand-listed set: a new lib/test_*.py that CI
+        # silently never runs is worse than no test at all.
+        run: python -m unittest discover -v -s lib -p 'test_*.py'
         working-directory: plugins/sdl
       - name: INDEX.md is current
         run: python plugins/sdl/lib/gen_index.py --check
@@ -113,6 +119,9 @@ jobs:
             plugins/sdl/lib/check_pins.py \
             plugins/sdl/lib/new_cycle.py \
             plugins/sdl/lib/gen_index.py \
+            plugins/sdl/lib/dep_facts.py \
+            plugins/sdl/lib/open_risks.py \
+            plugins/sdl/lib/cycle_stamp.py \
             docs/dependency-updates.md \
             docs/62443-mapping.md \
             docs/developer-guide.md \

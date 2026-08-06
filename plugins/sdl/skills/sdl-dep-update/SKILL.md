@@ -25,17 +25,27 @@ you personally verified this session.
 
 ### 1. Triage
 
-Check every escalation trigger from the policy's triage table: major version
-bump, new dependency or changed action `owner/repo`, unpinned ref,
-manifest changes beyond version fields, hand-authored lockfile edits, advisory
-affecting the new version. If any applies, stop and report which trigger fired,
-naming `sdl-spec` as the next step — do not run it yourself. `sdl-spec` is an
-interview and belongs in the main conversation, not here. Do not write a routine
-record for an escalation-tier change; the validator will reject majors anyway.
+Run the classifier instead of working through the triage table by hand
+(`<plugin-root>` is the directory two levels above this SKILL.md):
+
+```
+python3 <plugin-root>/lib/dep_facts.py --base origin/main
+```
+
+Exit 0 means the routine tier applies. Exit 2 means escalate, and the trigger it
+names is your answer: stop and report it, naming `sdl-spec` as the operator's
+next step — do not run it yourself. `sdl-spec` is an interview and belongs in
+the main conversation, not here. Do not write a routine record for an
+escalation-tier change; the validator will reject majors anyway.
+
+Two triggers the classifier cannot see are yours, and it prints both as a
+reminder: **manifest changes beyond version fields** (scripts, hooks, build
+config) and **an advisory affecting the new version**. Read the manifest diff
+and do the advisory lookup. A trigger only you can see is still a trigger.
 
 ### 2. Run the deterministic checks
 
-- Workflow pins: run `python3 <governance>/lib/check_pins.py` (add `--exempt`
+- Workflow pins: run `python3 <plugin-root>/lib/check_pins.py` (add `--exempt`
   for org-owned reusable workflows accepted as moving tags in the baseline).
 - Language ecosystems: confirm CI uses integrity mode (`npm ci`,
   `--require-hashes`, `--locked` …) or note its absence in the record.
@@ -50,16 +60,28 @@ you find a real conflict.
 
 ### 4. Write the record
 
-Scaffold the cycle folder (`<plugin-root>` is the directory two levels above this SKILL.md):
+Scaffold the cycle folder:
 
 ```
 python3 <plugin-root>/lib/new_cycle.py --class dependency-update
 ```
 
 It creates `docs/sdl/YYYY-MM-DD-<slug>/` with `.sdl-meta.yml` (including
-`class: dependency-update`) and a template `dep-update.md`. Fill the record:
-the updates table (exact old/new versions), checks you actually performed,
-notes.
+`class: dependency-update`) and a template `dep-update.md`. Fill its updates
+table from the diff rather than by hand:
+
+```
+python3 <plugin-root>/lib/dep_facts.py --base origin/main --write docs/sdl/<slug>
+```
+
+That writes one row per action pin bump, with versions read out of the diff by
+the same parse the gate uses to check them — never transcribe a version
+yourself. It leaves the Checks boxes and Notes untouched on purpose: those are
+your attestation, and no tool checks a box on your behalf. If the diff changed
+language-ecosystem manifests it names them and leaves their rows to you; add one
+row per package from the lockfile diff.
+
+Then check the boxes you actually earned and write the Notes.
 
 Regenerate the index (`python3 <plugin-root>/lib/gen_index.py`) and run the
 validator (`python3 <plugin-root>/lib/validate.py --base origin/main`).

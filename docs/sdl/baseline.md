@@ -8,7 +8,7 @@ SDL governance tooling for savioke. Public GitHub repo, no runtime service. Comp
 
 - `plugins/sdl/lib/validate.py` — the CI gate validator. Python, standard library only.
 - `.github/workflows/sdl-validate.yml` — reusable workflow consumers call via `workflow_call`.
-- `plugins/sdl/skills/` — agent skill definitions (`sdl-spec`, `sdl-threat-model`, `sdl-review`, `sdl-baseline`, `sdl-dep-update`) executed by Claude Code / Copilot.
+- `plugins/sdl/skills/` — agent skill definitions (`sdl-spec`, `sdl-threat-model`, `sdl-review`, `sdl-baseline`, `sdl-dep-update`) executed by Claude Code / Copilot / Antigravity / Codex.
 - `plugins/sdl/templates/` — markdown artifact stubs copied into each cycle.
 - `scripts/install.sh` — symlinks skills onto a developer workstation; `scripts/sync-to-repo.sh` — onboards a consumer repo.
 - `scripts/release.sh` — cuts a release; `scripts/check_release.py` — detects release drift in CI.

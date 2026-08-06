@@ -19,4 +19,5 @@
 | 2026-08-03-release-process | release-process | — | review | 2026-08-03 | Define and mechanize one release process for this repo, replacing a per-release judgment call — the previous guidance was to move the tag forward "only if you're confident" — with one procedure that is the same every time. |
 | 2026-08-04-fix-gate-tag-triggers | fix-gate-tag-triggers | — | review | 2026-08-04 | The SDL gate workflow generated for every participating repo declares `on: [pull_request, push]`. |
 | 2026-08-04-recognize-adoption-diff | recognize-adoption-diff | — | review | 2026-08-04 | A repo's SDL adoption PR cannot pass the gate. |
+| 2026-08-06-determinism-wins | determinism-wins | — | review | 2026-08-06 | Three cycle steps that never needed a model become commands. |
 | 2026-08-06-use-sub-agent-for-dep-update | use-sub-agent-for-dep-update | — | review | 2026-08-06 | `sdl-dep-update` gains frontmatter that runs it as a backgrounded subagent on Sonnet (`context: fork`, `background: true`, `model: sonnet`) instead of expanding inline into the operator's conversation on the primary model. |

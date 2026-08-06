@@ -77,6 +77,8 @@ claude
 
 Ask for an SDL dependency-update cycle ("write the SDL dependency update record for this branch"). The agent runs `sdl-dep-update`: confirms the diff qualifies for the routine tier, verifies pins against upstream tags, checks advisories and release notes, and writes `docs/sdl/<date>-<slug>/` with the `dep-update.md` record.
 
+Triage and the record's version table come straight out of the diff (`lib/dep_facts.py`), read by the same parse the gate uses to check them — so the versions in the record are not retyped by an agent, and the tier decision is an exit code rather than a judgment call.
+
 In Claude Code this runs in the background on a separate agent, so it won't hold up whatever else you're doing — the report arrives as a task notification when it's done. Other agents run it inline, as before.
 
 Then **read the record before you push.** The checked boxes are your attestation that the dependency changes were actually looked at — this step exists to make you affirm that, not to launder a bot PR past the gate. Commit and push to the PR branch; validation passes and the PR is mergeable.

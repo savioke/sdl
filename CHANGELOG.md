@@ -10,6 +10,65 @@ for the compatibility contract and the release procedure.
 Versions are the plugin's (`plugins/sdl/.claude-plugin/plugin.json`); each is
 tagged `vX.Y.Z` and, for the current major, aliased by `vX`.
 
+## 1.3.0 — 2026-08-06
+
+**Not breaking.** The gate is untouched — no PR that passed before fails now.
+The three new tools are things an agent already did by hand; none of them can
+reject a change, and skipping them changes nothing about whether a PR passes.
+
+### Tools
+
+Three pieces of cycle work that never needed a model. Each takes a step that was
+prose an agent reasoned through and makes it a command that answers instantly —
+and, where it touches an audit record, removes a place a wrong value could be
+typed in.
+
+- **`lib/dep_facts.py` — dependency triage and record rows, from the diff.**
+  Answers the two questions `sdl-dep-update` used to work through by hand: does
+  this diff qualify for the routine tier (exit 0), or which escalation trigger
+  fired (exit 2, named on stdout)? With `--write` it also fills the record's
+  Updates table. Versions are read out of the diff by the same parse the gate
+  uses to check them, so a version in a record is no longer transcribed by an
+  agent. Deliberately partial and explicit about it: GitHub Actions pin rows are
+  generated in full, language-ecosystem manifests are named and left to the
+  author, and the two triggers no classifier can see — manifest changes beyond
+  version fields, and advisory results — stay attestation and are printed as a
+  reminder. It never checks a Checks box or writes a Note.
+- **`lib/open_risks.py` — what earlier cycles left open.** Reads every cycle's
+  residual-risk table, keeps the `defer` and `mitigate-later` rows, and drops any
+  a later cycle already claimed in its `carry_forward:`. `sdl-spec` used to
+  re-derive this by reading every `04-verification.md` at the start of each
+  cycle — work that grew with the repo and produced the same answer every time.
+  `--all` shows accepted and already-claimed items too.
+- **`lib/cycle_stamp.py` — the mechanical review fields.** Stamps Reviewer, Date,
+  and Diff range into `04-verification.md`, and prints the last commit touching
+  each changed file for the `03` mitigation table. Writes nothing else; the
+  findings are the review. `--agent` names a non-Claude agent.
+
+### Skills
+
+- `sdl-dep-update` triage is now the classifier's exit code rather than a table
+  read by hand, and its Updates table is generated. The attestation steps are
+  unchanged — you still check only the boxes you earned.
+- `sdl-spec` calls `open_risks.py` for carry-forward detection.
+- `sdl-review` calls `cycle_stamp.py` for the fields git already knows.
+- Fixed: `sdl-dep-update` referred to the plugin root as both `<governance>` and
+  `<plugin-root>` in the same file. That skill now says `<plugin-root>`
+  throughout. (`new_cycle.py` and `gen_index.py` still say `<governance>` in
+  their usage docstrings — cosmetic, and left for a cycle that touches them.)
+
+### CI (this repo only — consumers unaffected)
+
+- `self-check.yml` discovers `lib/test_*.py` instead of running a hand-listed
+  set, so a new test file cannot be silently skipped, and smoke-runs `--help` for
+  every tool rather than just the validator.
+
+### Upgrading
+
+Nothing to do. The new tools ship with the plugin and the skills call them; if
+you invoke the skills as usual you get the faster path automatically. Running
+them by hand is supported — each takes `--help`.
+
 ## 1.2.0 — 2026-08-06
 
 **Not breaking.** The gate is untouched — no PR that passed before fails now.

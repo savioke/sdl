@@ -75,11 +75,19 @@ For every threat ID in `02-threat-model.md`, check whether its claimed mitigatio
 
 | Threat | Mitigation | Location | Commit |
 
-Fill `Location` with `file:line`. Fill `Commit` with the short SHA from `git log -1 --format=%h <file>` for the most recent change to that file in this branch.
+Fill `Location` with `file:line`. For `Commit`, use the per-file short SHAs printed by `cycle_stamp.py` in step 5 rather than running `git log` per file yourself — which file backs which threat is your judgment, but the SHA is not.
 
 If a threat from the model has no corresponding code change, that is a finding — either the threat doesn't apply to what was built, or the mitigation was missed. Surface it explicitly.
 
 ### 5. Update the artifacts
+
+First stamp the mechanical fields, which git already knows (`<plugin-root>` is the directory two levels above this SKILL.md):
+
+```
+python3 <plugin-root>/lib/cycle_stamp.py --base origin/main --write docs/sdl/<slug>
+```
+
+That fills Reviewer, Date, and Diff range in `04-verification.md` and prints the last commit touching each changed file, for the `03` mitigation table. It writes nothing else — the findings are the review, and they are yours. Pass `--agent Codex` (or similar) if you are not Claude.
 
 **`03-implementation.md`:**
 - Fill the "Summary of changes" with one paragraph from the diff.
@@ -89,9 +97,7 @@ If a threat from the model has no corresponding code change, that is a finding �
 - Fill "Deviations from spec or threat model" if anything was implemented differently than `01`/`02` described. Be honest.
 
 **`04-verification.md`:**
-- Set Reviewer to `sdl-review (Claude/Copilot) + <username from git config>`.
-- Set Date to today.
-- Set Diff range to the merge-base..HEAD range you used.
+- Reviewer, Date, and Diff range are already stamped by `cycle_stamp.py` above. If you skipped it, fill them by hand: `sdl-review (<agent>) + <git config user.name>`, today, and the merge-base..HEAD range you actually reviewed.
 - Write a `### <Category>` subsection under "Checks performed" **only for categories the diff actually touches** — a verified positive practice, or a finding. Collapse the rest into one line at the end: `Not applicable (no code in these areas): persistence, cryptography, network/transport, authn/authz, frontend, native, CI/supply-chain.` Do not write a `### Category` / `Applies: no` stanza per non-applicable category.
 - Reference any static analysis or SBOM output already present in CI.
 - Populate the Residual risks table with anything you couldn't verify or that should be deferred. Each row needs an ID (R1, R2, …), description, severity, disposition, and a carry-forward target if applicable.

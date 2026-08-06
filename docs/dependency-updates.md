@@ -45,6 +45,14 @@ version fields (scripts, hooks), hand-authored lockfile edits, and advisory
 results are the author's attestation, backed by human merge review. The
 validator does not parse lockfile contents.
 
+`plugins/sdl/lib/dep_facts.py` runs that same classifier ahead of the gate, so
+the author gets the tier decision and the named trigger as an exit code
+(0 routine, 2 escalate) instead of working the table by hand. With `--write` it
+also fills the record's Updates table from the diff. It never touches the Checks
+boxes or Notes: the triggers it cannot see — manifest changes beyond version
+fields, and advisory results — stay the author's attestation, and it prints both
+as a reminder rather than implying coverage it does not have.
+
 ## Checks
 
 Deterministic, re-run in CI rather than trusted from the record where possible:
