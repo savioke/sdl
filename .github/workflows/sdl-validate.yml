@@ -3,7 +3,7 @@ on:
   workflow_call:
     inputs:
       base:
-        description: Merge base ref to compare against
+        description: Merge base ref to compare against (pull_request events)
         required: false
         type: string
         default: origin/main
@@ -12,6 +12,10 @@ on:
         required: false
         type: string
         default: v1
+
+permissions:
+  contents: read
+  pull-requests: read
 
 jobs:
   validate:
@@ -34,8 +38,70 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Run validator
+      # A pull_request run validates the PR diff. A push run exists only to
+      # catch code that reached the branch without one — so anything that did
+      # arrive through a merged PR is skipped rather than re-judged by
+      # different rules. Every uncertain case falls through to validating.
+      - name: Resolve what to validate
+        id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_BASE: ${{ inputs.base }}
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          python .sdl-governance/plugins/sdl/lib/validate.py \
-            --base "${{ inputs.base }}" \
-            --repo .
+          set -uo pipefail
+          emit() { echo "$1=$2" >> "$GITHUB_OUTPUT"; }
+          note() { echo "$1"; echo "$1" >> "$GITHUB_STEP_SUMMARY"; }
+
+          if [ "$EVENT" != "push" ]; then
+            emit base "$INPUT_BASE"; emit push false; emit skip false
+            note "Validating the $EVENT diff against $INPUT_BASE."
+            exit 0
+          fi
+
+          # Squash and rebase merges land as single-parent commits, so parent
+          # count cannot tell a merge from a direct push. The API can.
+          PRS=$(gh api "repos/$REPO/commits/$SHA/pulls" \
+                  --jq '[.[] | select(.merged_at != null)] | length' 2>/dev/null) \
+            || PRS=unknown
+          if [ "$PRS" != "unknown" ] && [ "$PRS" != "0" ]; then
+            emit skip true
+            note "Skipped: $SHA arrived through a merged pull request, which the pull_request run already validated."
+            exit 0
+          fi
+          if [ "$PRS" = "unknown" ]; then
+            note "Could not determine whether $SHA came from a pull request; validating rather than assuming it was."
+          fi
+
+          ZERO=0000000000000000000000000000000000000000
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "$ZERO" ]; then
+            emit skip true
+            note "Skipped: branch was created by this push, so there is no previous state to compare against."
+            exit 0
+          fi
+          if ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            emit skip true
+            note "Skipped: previous commit $BEFORE is not reachable (force push or rewritten history), so no diff can be computed."
+            exit 0
+          fi
+
+          emit base "$BEFORE"; emit push true; emit skip false
+          note "Direct push detected. Validating $BEFORE..$SHA."
+
+      - name: Run validator
+        if: steps.scope.outputs.skip != 'true'
+        env:
+          BASE: ${{ steps.scope.outputs.base }}
+          PUSH: ${{ steps.scope.outputs.push }}
+        run: |
+          set -euo pipefail
+          args=(--base "$BASE" --repo .)
+          # Not `[ ... ] && args+=(...)`: under set -e a false test would end
+          # the step, silently skipping the validator it is meant to configure.
+          if [ "$PUSH" = "true" ]; then
+            args+=(--push)
+          fi
+          python .sdl-governance/plugins/sdl/lib/validate.py "${args[@]}"

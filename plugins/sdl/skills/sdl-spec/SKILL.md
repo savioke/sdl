@@ -40,6 +40,14 @@ python3 <plugin-root>/lib/new_cycle.py
 
 It normalizes the branch name to a slug, creates `docs/sdl/YYYY-MM-DD-<slug>/` from the templates, and writes `.sdl-meta.yml`; it refuses to overwrite an existing folder or re-scaffold a branch that already has a cycle. Do not hand-copy templates or hand-write the meta file — the tool exists so this step is deterministic. `related_cycles` and `carry_forward` get filled in step 3.
 
+**Working directly on the default branch.** If the change is going to be pushed straight to `main` rather than through a PR, pass `--slug <short-name>` describing the change:
+
+```
+python3 <plugin-root>/lib/new_cycle.py --slug fix-token-refresh
+```
+
+The branch name is not a useful slug here — every such cycle would be called `main` — and the one-cycle-per-branch guard would refuse the second one. An explicit slug gives each push its own cycle, which is what the gate expects: a direct push must carry its own evidence, since no PR review stood between the code and the branch. Scaffold, author, and push the cycle in the same push as the code.
+
 ### 2. Run the requirements interview
 
 Ask only what you cannot infer. Be concise — one short message with the questions, not a long preamble. If the user has already told you most of it in the conversation, fill what you know and ask only for the gaps.

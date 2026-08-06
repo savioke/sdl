@@ -85,6 +85,20 @@ Then **read the record before you push.** The checked boxes are your attestation
 
 If the bump is a major version, the agent will say so and escalate to a full cycle (`sdl-spec`) instead — that's intended, not a malfunction.
 
+## Pushing straight to main
+
+Most work goes through a PR, and the PR run is the gate. A push that lands on `main` without one is checked separately: the gate asks GitHub whether the commit came from a merged pull request, skips it if so, and otherwise treats it as a direct push and validates it against the previous commit.
+
+A direct push that changes code has to carry its own SDL cycle in the same push — there was no PR review between the code and the branch, so the evidence has to arrive with it. Scaffold it with a name, since the branch is not a useful one:
+
+```
+python3 ~/.sdl-governance/plugins/sdl/lib/new_cycle.py --slug fix-token-refresh
+```
+
+Then author it as usual and push both together. Docs, config, and other non-code changes are unaffected — the cycle requirement only applies to source files, `.github/workflows/`, and skill definitions, so a README or a spec document can go straight to `main` as before.
+
+Branch creation and force-pushes are skipped rather than guessed at: there is no coherent previous state to diff against, and the gate says so instead of inventing one.
+
 ## Browsing the SDL docs in a browser
 
 To read a repo's cycles as rendered HTML instead of raw markdown:

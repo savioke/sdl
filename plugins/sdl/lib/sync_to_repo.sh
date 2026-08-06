@@ -41,10 +41,11 @@ else
 name: sdl
 on:
   pull_request:
-  # Branch-filtered deliberately: an unfiltered push also fires on tag pushes,
-  # where the validator has nothing to say — it diffs against origin/main, so a
-  # release tag yields an empty diff and a vacuous pass, and a tag cut anywhere
-  # else demands a cycle for a push that changed no code.
+  # The pull_request run is the gate. The push run exists to catch code that
+  # reached the branch without one — a direct push — and skips anything that
+  # arrived through a merged PR. Branch-filtered deliberately: an unfiltered
+  # push also fires on tag pushes, where there is nothing to validate.
+  # Change 'main' if this repo's default branch is named differently.
   push:
     branches: [main]
 jobs:

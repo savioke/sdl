@@ -233,6 +233,35 @@ def code_changed(files: list[Path]) -> bool:
     )
 
 
+def cycle_in_diff(repo: Path, files: list[Path]) -> Path | None:
+    """A cycle folder carried by this diff.
+
+    Used for a direct push, which has no source branch for a cycle to declare.
+    Matching on `branch: main` instead would be worse than useless: the first
+    cycle ever written for a direct push would vouch for every later one.
+    Requiring the push to bring its own evidence is the honest test.
+    """
+    slugs = {f.parts[2] for f in files
+             if f.as_posix().startswith("docs/sdl/") and len(f.parts) > 3}
+    for slug in sorted(slugs):
+        cycle = repo / "docs" / "sdl" / slug
+        if (cycle / ".sdl-meta.yml").is_file():
+            return cycle
+    return None
+
+
+def resolve_cycle(repo: Path, branch: str, files: list[Path], push: bool) -> Path | None:
+    """Which cycle, if any, vouches for this diff."""
+    return cycle_in_diff(repo, files) if push else find_cycle_for_branch(repo, branch)
+
+
+def same_commit(base: str) -> bool:
+    try:
+        return run(["git", "rev-parse", base]).strip() == run(["git", "rev-parse", "HEAD"]).strip()
+    except RuntimeError:
+        return False
+
+
 def find_cycle_for_branch(repo: Path, branch: str) -> Path | None:
     sdl = repo / "docs" / "sdl"
     if not sdl.is_dir():
@@ -330,15 +359,28 @@ def check_adoption(repo: Path, base: str, files: list[Path], templates: Path | N
 
 
 def check_cycle_present(repo: Path, branch: str, files: list[Path],
-                        base: str, templates: Path | None) -> Result:
+                        base: str, templates: Path | None,
+                        push: bool = False) -> Result:
+    # An empty diff is reported as what it is. "No substantive code changes"
+    # reads as a verdict on the work; when base and HEAD are the same commit
+    # there was no work to have a verdict about.
+    if not files:
+        if same_commit(base):
+            return Result(True, f"{base} and HEAD are the same commit — nothing to compare")
+        return Result(True, f"no files changed between {base} and HEAD")
     if not code_changed(files):
         return Result(True, "no substantive code changes; cycle presence not required")
-    cycle = find_cycle_for_branch(repo, branch)
+    cycle = resolve_cycle(repo, branch, files, push)
     if cycle is not None:
         return Result(True, f"cycle found: {cycle.relative_to(repo)}")
     adoption = check_adoption(repo, base, files, templates)
     if adoption is not None:
         return adoption
+    if push:
+        return Result(False, "code pushed directly to a protected branch with no SDL "
+                             "cycle in the same push. A push that bypasses PR review "
+                             "carries its own evidence: scaffold one with "
+                             "'new_cycle.py --slug <name>', author it, and push again.")
     return Result(False, f"code changed but no SDL cycle declares this branch — no "
                          f"docs/sdl/*/.sdl-meta.yml has 'branch: {branch}'. Run the sdl-spec skill.")
 
@@ -388,6 +430,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Validate SDL artifacts.")
     parser.add_argument("--base", default="origin/main", help="merge base ref")
     parser.add_argument("--repo", default=".", help="repo root")
+    parser.add_argument("--push", action="store_true",
+                        help="this diff is a direct push, not a pull request: require "
+                             "the cycle to be carried by the push rather than to "
+                             "declare a source branch")
     args = parser.parse_args()
 
     repo = Path(args.repo).resolve()
@@ -396,9 +442,9 @@ def main() -> int:
     templates = template_dir()
 
     results: list[Result] = []
-    results.append(check_cycle_present(repo, branch, files, args.base, templates))
+    results.append(check_cycle_present(repo, branch, files, args.base, templates, args.push))
 
-    cycle = find_cycle_for_branch(repo, branch)
+    cycle = resolve_cycle(repo, branch, files, args.push)
     if cycle is not None:
         results.append(check_meta_branch(cycle, branch))
         cls = cycle_class(cycle)
