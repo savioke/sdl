@@ -13,7 +13,7 @@
 set -euo pipefail
 
 PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SDL_REF="${SDL_REF:-v1}"
+SDL_REF="${SDL_REF:-v2}"
 # Interpolated into generated YAML; restrict to git-ref characters so a
 # crafted value can't inject workflow content.
 [[ "$SDL_REF" =~ ^[A-Za-z0-9._/-]+$ ]] || { echo "xx invalid SDL_REF: $SDL_REF" >&2; exit 1; }
@@ -41,10 +41,11 @@ else
 name: sdl
 on:
   pull_request:
-  # Branch-filtered deliberately: an unfiltered push also fires on tag pushes,
-  # where the validator has nothing to say — it diffs against origin/main, so a
-  # release tag yields an empty diff and a vacuous pass, and a tag cut anywhere
-  # else demands a cycle for a push that changed no code.
+  # The pull_request run is the gate. The push run exists to catch code that
+  # reached the branch without one — a direct push — and skips anything that
+  # arrived through a merged PR. Branch-filtered deliberately: an unfiltered
+  # push also fires on tag pushes, where there is nothing to validate.
+  # Change 'main' if this repo's default branch is named differently.
   push:
     branches: [main]
 jobs:

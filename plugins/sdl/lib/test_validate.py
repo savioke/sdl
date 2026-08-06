@@ -241,7 +241,7 @@ on:
     branches: [main]
 jobs:
   validate:
-    uses: savioke/sdl/.github/workflows/sdl-validate.yml@v1
+    uses: savioke/sdl/.github/workflows/sdl-validate.yml@v2
 """
 
 
@@ -454,6 +454,98 @@ class DependencyRecord(unittest.TestCase):
         r = v.check_dep_record(self.cycle, None)
         self.assertFalse(r)
         self.assertIn("declares no updates", r.msg)
+
+
+class DirectPush(unittest.TestCase):
+    """--push: a push that bypassed PR review must carry its own cycle."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.repo = Path(self._tmp.name)
+        (self.repo / "docs" / "sdl").mkdir(parents=True)
+
+    def cycle(self, slug, branch="main"):
+        d = self.repo / "docs" / "sdl" / slug
+        d.mkdir()
+        (d / ".sdl-meta.yml").write_text(f"slug: {slug}\nbranch: {branch}\n",
+                                         encoding="utf-8")
+        return d
+
+    def present(self, files, push=True):
+        with mock.patch.object(v, "added_files", return_value=set()):
+            with mock.patch.object(v, "same_commit", return_value=False):
+                return v.check_cycle_present(self.repo, "main", files, "abc123",
+                                             None, push)
+
+    def test_push_carrying_its_cycle_passes(self):
+        self.cycle("2026-08-06-fix-token-refresh")
+        result = self.present([
+            P("src/auth.py"),
+            P("docs/sdl/2026-08-06-fix-token-refresh/01-requirements.md"),
+        ])
+        self.assertTrue(result, result.msg)
+        self.assertIn("2026-08-06-fix-token-refresh", result.msg)
+
+    def test_push_with_code_and_no_cycle_fails(self):
+        result = self.present([P("src/auth.py")])
+        self.assertFalse(result)
+        self.assertIn("directly", result.msg)
+        self.assertIn("--slug", result.msg)
+
+    def test_an_unrelated_existing_main_cycle_does_not_vouch(self):
+        """The hole branch-matching would leave: one old cycle declaring
+        `branch: main` must not clear every later direct push."""
+        self.cycle("2026-01-01-something-old")
+        self.assertFalse(self.present([P("src/auth.py")]))
+        # ...while the same diff passes on a PR, where the branch is declared.
+        self.assertTrue(self.present([P("src/auth.py")], push=False))
+
+    def test_docs_only_push_needs_no_cycle(self):
+        result = self.present([P("README.md"), P("docs/mapping-spec.md")])
+        self.assertTrue(result, result.msg)
+
+    def test_index_and_baseline_are_not_mistaken_for_a_cycle(self):
+        # docs/sdl/INDEX.md is two levels deep, not a cycle folder.
+        result = self.present([P("src/auth.py"), P("docs/sdl/INDEX.md"),
+                               P("docs/sdl/baseline.md")])
+        self.assertFalse(result)
+
+    def test_a_cycle_folder_without_meta_does_not_count(self):
+        (self.repo / "docs" / "sdl" / "2026-08-06-empty").mkdir()
+        result = self.present([
+            P("src/auth.py"),
+            P("docs/sdl/2026-08-06-empty/01-requirements.md"),
+        ])
+        self.assertFalse(result)
+
+
+class EmptyDiffReporting(unittest.TestCase):
+    """The message that misreported a no-op push as a verdict on the work."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.repo = Path(self._tmp.name)
+
+    def test_same_commit_says_so(self):
+        with mock.patch.object(v, "same_commit", return_value=True):
+            result = v.check_cycle_present(self.repo, "main", [], "origin/main", None)
+        self.assertTrue(result)
+        self.assertIn("same commit", result.msg)
+        self.assertNotIn("no substantive code changes", result.msg)
+
+    def test_empty_diff_between_different_commits_says_that_instead(self):
+        with mock.patch.object(v, "same_commit", return_value=False):
+            result = v.check_cycle_present(self.repo, "main", [], "abc123", None)
+        self.assertTrue(result)
+        self.assertIn("no files changed", result.msg)
+
+    def test_a_real_diff_with_no_code_is_still_reported_as_such(self):
+        result = v.check_cycle_present(self.repo, "main", [P("README.md")],
+                                       "abc123", None)
+        self.assertTrue(result)
+        self.assertIn("no substantive code changes", result.msg)
 
 
 class CycleClass(unittest.TestCase):

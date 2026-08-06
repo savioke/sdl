@@ -71,7 +71,7 @@ name: sdl
 on: [pull_request, push]
 jobs:
   validate:
-    uses: savioke/sdl/.github/workflows/sdl-validate.yml@v1
+    uses: savioke/sdl/.github/workflows/sdl-validate.yml@v2
 ```
 
 ## Artifact model

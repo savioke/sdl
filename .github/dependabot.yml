@@ -10,7 +10,7 @@ updates:
       actions:
         patterns:
           - "*"
-    # Our own reusable workflow is pinned to the moving @v1 tag on purpose
+    # Our own reusable workflow is pinned to the moving major alias on purpose
     # (baseline:B5); don't let Dependabot pin it to a SHA.
     ignore:
       - dependency-name: savioke/sdl

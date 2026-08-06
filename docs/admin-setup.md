@@ -65,13 +65,13 @@ Anyone whose clone predates 1.0.0 must re-run `install.sh` once, not just pull: 
 Full procedure and the compatibility contract: **`releasing.md`**. In short:
 
 1. Make the change on a branch, with its SDL cycle. In the same PR, bump `version` in `plugins/sdl/.claude-plugin/plugin.json` and add the matching `CHANGELOG.md` entry — CI fails the PR if shipped content changed without them.
-2. Open a PR. This repo runs its own SDL gate (`.github/workflows/sdl.yml`, self-referential at `@v1`) plus `self-check.yml` unit tests — but you are still the primary reviewer: single maintainer, no second human. Bad logic here breaks every other repo's CI, so self-review carefully.
+2. Open a PR. This repo runs its own SDL gate (`.github/workflows/sdl.yml`, self-referential at the current alias) plus `self-check.yml` unit tests — but you are still the primary reviewer: single maintainer, no second human. Bad logic here breaks every other repo's CI, so self-review carefully.
 3. Merge to `main`.
 4. Run `scripts/release.sh`. It tags `vX.Y.Z`, moves the `vX` alias consumers pin, and updates the marketplace manifest. Do it right after the merge, while you are still at the keyboard: **nothing goes red in the meantime.** Merging and forgetting is silent until the next daily `self-check` run (06:17 UTC), which is when a merged-but-unreleased state is reported. Releasing immediately is the control; the daily run is only the backstop. To check on demand, run the `self-check` workflow from the Actions tab, or `python scripts/check_release.py --mode released` locally.
 
    Released-mode checks deliberately do not run on push to `main` — between a merge and its release they are all transient, and failing there would block the very release that clears them. `releasing.md`, "What CI checks", has the reasoning; cycle `2026-08-03-release-process` records it as residual risk R5.
 
-Consuming repos default to the moving `@v1` and need no action per release; they can pin an exact tag (`@v1.2.3`) for stricter reproducibility or to hold still during an audit. See `scripts/sync-to-repo.sh` (the `SDL_REF` variable).
+Consuming repos default to the moving `@v2` and need no action per release; they can pin an exact tag (`@v2.0.0`) for stricter reproducibility or to hold still during an audit, in which case pin `sdl_ref` to match. See `scripts/sync-to-repo.sh` (the `SDL_REF` variable).
 
 ## Why this repo is public
 
@@ -86,7 +86,7 @@ If we ever need to go private, the conversion is: flip visibility, re-add a read
 
 ## Troubleshooting
 
-**A consuming repo's CI fails to parse with "called workflow was not found" (`savioke/sdl/.github/workflows/sdl-validate.yml@v1`).** Either the `@v1` tag doesn't exist in this repo, or this repo was made private (a private repo's reusable workflow is invisible to callers without an access policy). Confirm the tag exists and the repo is public.
+**A consuming repo's CI fails to parse with "called workflow was not found" (`savioke/sdl/.github/workflows/sdl-validate.yml@v2`).** Either the pinned tag doesn't exist in this repo, or this repo was made private (a private repo's reusable workflow is invisible to callers without an access policy). Confirm the tag exists and the repo is public.
 
 **Skills aren't loading in Claude Code.** Run `/plugin` and confirm `sdl` is installed and enabled from marketplace `relay`. If the marketplace is missing, re-add it (`/plugin marketplace add savioke/relay-plugin-marketplace`).
 

@@ -2,13 +2,97 @@
 
 What changed in each release of `savioke/sdl`, newest first.
 
-Consumer repos pin the moving `@v1` alias, so a release reaches their CI without
-them changing anything — this file is how they find out what moved. Every entry
-notes whether it can turn a previously-passing PR red. See `docs/releasing.md`
-for the compatibility contract and the release procedure.
+Consumer repos pin the moving major alias (`@v2`), so a release reaches their CI
+without them changing anything — this file is how they find out what moved. Every
+entry notes whether it can turn a previously-passing PR red. See
+`docs/releasing.md` for the compatibility contract and the release procedure.
+
+Entries below 2.0.0 describe the `v1` line and refer to `@v1` as it was current
+at the time. They are left as written: a changelog is a record of what shipped,
+not a description of the present. `v1` is end-of-life — see 2.0.0.
 
 Versions are the plugin's (`plugins/sdl/.claude-plugin/plugin.json`); each is
 tagged `vX.Y.Z` and, for the current major, aliased by `vX`.
+
+## 2.0.0 — 2026-08-06
+
+**Breaking.** A direct push of code to the default branch now fails the gate
+unless the push carries an SDL cycle. Nothing else changes what passes: pull
+requests are validated exactly as before.
+
+**`v1` is end-of-life.** The `v1` alias is left where it is so nothing breaks
+mid-flight, but it is not maintained: it contains a `push` run that validates
+nothing, which is the defect this release exists to fix. Move every repo to
+`@v2`. New adoptions get `@v2` automatically.
+
+### The gate now sees direct pushes
+
+Before this, the `push` run was a no-op in every repo. It diffed `origin/main`
+against `HEAD` — the same commit, on a push to main — so it found nothing and
+reported "no substantive code changes; cycle presence not required." Green, on
+every push, forever. Code that reached `main` without a PR was never validated
+by anything.
+
+- **Pushes that came from a PR are skipped, not re-judged.** The gate asks
+  GitHub whether the commit came from a merged pull request. It did — skip, the
+  `pull_request` run already validated it under the full rules (adoption PRs,
+  dependency-update class, and all). Re-deriving that decision on the push path
+  would mean reimplementing those rules and getting the edge cases wrong.
+  Commit *parent count* is not used for this: squash and rebase merges land as
+  single-parent commits and would have been misread as direct pushes.
+- **Direct pushes are validated against the previous commit**
+  (`github.event.before`) rather than against a ref that has already moved.
+- **A direct push must carry its own cycle.** It is matched by the cycle folder
+  appearing in the push, not by `branch:` — a cycle declaring `branch: main`
+  would otherwise vouch for every future push to `main` once one existed.
+- **Every uncertain case validates rather than skips.** If the PR lookup fails,
+  the gate validates and says why it could not tell.
+- **Branch creation and force-pushes are skipped explicitly**, with the reason
+  stated: there is no reachable previous commit to diff against.
+
+### Honest reporting
+
+- An empty diff now says what it is — `origin/main and HEAD are the same commit
+  — nothing to compare` — instead of "no substantive code changes", which read
+  as a verdict on the work when there had been no work to judge.
+
+### Tools
+
+- **`new_cycle.py --slug NAME`** names a cycle explicitly and lifts the
+  one-cycle-per-branch guard. Without it, successive direct pushes to `main`
+  were impossible to scaffold: the first produced `<date>-main` and every later
+  one was refused as "branch 'main' already has a cycle". The guard still
+  applies to feature branches, where a second scaffold is an accident rather
+  than an intent.
+
+### Hardening
+
+- `sdl-validate.yml` passes inputs through the environment instead of
+  interpolating `${{ }}` directly into `run:` blocks. Any repo may call this
+  workflow (`baseline:B4`), and an interpolated input is a script-injection
+  path — into the caller's own runner, but worth closing regardless.
+- The workflow declares `permissions: contents: read, pull-requests: read`.
+
+### Upgrading
+
+Point your `sdl.yml` at `@v2` — one line, and the only required step:
+
+```yaml
+uses: savioke/sdl/.github/workflows/sdl-validate.yml@v2
+```
+
+Then, before you push code straight to `main`, scaffold a cycle for it with
+`new_cycle.py --slug <name>` and push both together. Docs and config are
+unaffected — the requirement applies to source files, `.github/workflows/`, and
+skill definitions.
+
+If your `sdl.yml` also passes `sdl_ref`, move it to `v2` as well; leaving it at
+`v1` pairs the v2 workflow with a v1 validator that does not understand
+`--push`. Repos that pass nothing get the right default.
+
+Repos whose default branch is not named `main` should change `branches: [main]`
+in their own `sdl.yml`; otherwise the push run never fires and the gap this
+release closes stays open there.
 
 ## 1.3.0 — 2026-08-06
 
@@ -70,6 +154,11 @@ you invoke the skills as usual you get the faster path automatically. Running
 them by hand is supported — each takes `--help`.
 
 ## 1.2.0 — 2026-08-06
+
+**Never tagged.** 1.3.0 was released before this version was, and `release.sh`
+reads whatever `plugin.json` says at release time, so no `v1.2.0` tag exists.
+Everything below shipped inside `v1.3.0`. Kept as a record of what changed and
+when; do not go looking for the tag.
 
 **Not breaking.** The gate is untouched — no PR that passed before fails now.
 

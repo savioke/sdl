@@ -55,8 +55,8 @@ Two channels deliver this repo, with opposite pinning economics:
 
 | Channel | Who consumes it | What it pins | Why |
 |---------|-----------------|--------------|-----|
-| CI gate | Every governed repo's `.github/workflows/sdl.yml` | the moving alias `@v1` | There are N of these, owned by other teams. Asking them to edit a pin per release does not scale, so the alias moves under them. |
-| Claude Code plugin | One manifest in `savioke/relay-plugin-marketplace` | the immutable tag `v1.2.3` | There is exactly one pin and it is edited every release anyway, so pinning exactly is free — and it makes a version identify one specific tree. |
+| CI gate | Every governed repo's `.github/workflows/sdl.yml` | the moving alias `@v2` | There are N of these, owned by other teams. Asking them to edit a pin per release does not scale, so the alias moves under them. |
+| Claude Code plugin | One manifest in `savioke/relay-plugin-marketplace` | the immutable tag `v2.0.0` | There is exactly one pin and it is edited every release anyway, so pinning exactly is free — and it makes a version identify one specific tree. |
 
 *Pin exactly where there is one pin to maintain; use a moving alias where there are many.* The release script sets both from the same commit so they cannot diverge.
 
@@ -97,17 +97,19 @@ Nothing verifies these signatures yet — they are attribution and audit evidenc
 
 ## Onboarding a repo mid-flight
 
-Nothing to coordinate: `sync-to-repo.sh` writes a workflow pinned to `@v1`, and the repo picks up whatever the alias points at on its first run. A repo that needs to hold still — mid-audit, say — can pin an exact tag in its own `sdl.yml`:
+Nothing to coordinate: `sync-to-repo.sh` writes a workflow pinned to the current alias (`@v2`; override with `SDL_REF`), and the repo picks up whatever that alias points at on its first run. A repo that needs to hold still — mid-audit, say — can pin an exact tag in its own `sdl.yml`:
 
 ```yaml
-uses: savioke/sdl/.github/workflows/sdl-validate.yml@v1.2.3
+uses: savioke/sdl/.github/workflows/sdl-validate.yml@v2.0.0
 ```
 
-That is also the fix when a release breaks someone: pin the previous exact tag to unblock, tell the maintainer, go back to `@v1` once it is fixed. Say so in the changelog entry if a release is likely to need it.
+Pin `sdl_ref` to the same tag if you do, so the validator code and the workflow come from one commit.
+
+That is also the fix when a release breaks someone: pin the previous exact tag to unblock, tell the maintainer, go back to the alias once it is fixed. Say so in the changelog entry if a release is likely to need it.
 
 ## If a release goes wrong
 
-1. **Roll the alias back.** `git tag -f v1 v1.2.2 && git push -f origin v1` — consumers recover on their next run. The bad `v1.2.3` tag stays; it is evidence.
+1. **Roll the alias back.** `git tag -f v2 v2.0.0 && git push -f origin v2` — consumers recover on their next run. The bad tag stays; it is evidence.
 2. **Roll the manifest back** to the previous version and `source.ref` if developers are affected, then tell them to run `/plugin marketplace update relay`.
 3. **Fix forward** in a normal PR with a version bump, noting both the break and the fix in `CHANGELOG.md`.
 

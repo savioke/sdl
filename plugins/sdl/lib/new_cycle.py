@@ -5,11 +5,16 @@ Replaces the agent-performed steps of sdl-spec §1–2: slug normalization,
 folder creation, template copy, .sdl-meta.yml population. Run from the root
 of the repo being governed:
 
-    python3 <governance>/lib/new_cycle.py                      # full cycle
-    python3 <governance>/lib/new_cycle.py --class dependency-update
+    python3 <plugin-root>/lib/new_cycle.py                      # full cycle
+    python3 <plugin-root>/lib/new_cycle.py --class dependency-update
+    python3 <plugin-root>/lib/new_cycle.py --slug fix-token-refresh
 
-Refuses to overwrite an existing folder or re-scaffold a branch that already
-has a cycle. Prints the created folder path on success.
+Refuses to overwrite an existing folder. Also refuses to re-scaffold a branch
+that already has a cycle — a guard against accidentally starting a second cycle
+for work already in progress. `--slug` names the cycle explicitly and lifts that
+guard, because naming one is not an accident: it is what you want when several
+cycles legitimately share a branch, most often successive direct pushes to the
+default branch. Prints the created folder path on success.
 """
 
 from __future__ import annotations
@@ -72,12 +77,18 @@ def meta_text(slug: str, branch: str, created: str, cycle_class: str) -> str:
 
 
 def scaffold(repo: Path, branch: str, created: str, cycle_class: str,
-             templates: Path) -> Path:
-    existing = find_cycle_for_branch(repo, branch)
-    if existing is not None:
-        raise FileExistsError(
-            f"branch {branch!r} already has a cycle: {existing.relative_to(repo)}")
-    slug = f"{created}-{slugify(branch)}"
+             templates: Path, name: str | None = None) -> Path:
+    # The one-cycle-per-branch guard protects a feature branch from a second,
+    # accidental scaffold. An explicit name is deliberate, and is how a branch
+    # that carries many cycles over time — typically the default branch, one
+    # cycle per direct push — gets each of them its own folder.
+    if name is None:
+        existing = find_cycle_for_branch(repo, branch)
+        if existing is not None:
+            raise FileExistsError(
+                f"branch {branch!r} already has a cycle: {existing.relative_to(repo)}. "
+                f"Pass --slug to start a distinct one.")
+    slug = f"{created}-{slugify(name or branch)}"
     cycle = repo / "docs" / "sdl" / slug
     if cycle.exists():
         raise FileExistsError(f"{cycle.relative_to(repo)} already exists")
@@ -102,6 +113,9 @@ def main() -> int:
     parser.add_argument("--class", dest="cycle_class", default="full",
                         choices=("full", "dependency-update"), help="cycle class")
     parser.add_argument("--templates", default=None, help="templates directory")
+    parser.add_argument("--slug", default=None, metavar="NAME",
+                        help="name the cycle explicitly instead of deriving it from "
+                             "the branch; also lifts the one-cycle-per-branch guard")
     args = parser.parse_args()
 
     repo = Path(args.repo).resolve()
@@ -123,7 +137,7 @@ def main() -> int:
         return 1
 
     try:
-        cycle = scaffold(repo, branch, created, args.cycle_class, templates)
+        cycle = scaffold(repo, branch, created, args.cycle_class, templates, args.slug)
     except (FileExistsError, FileNotFoundError, ValueError) as e:
         print(str(e), file=sys.stderr)
         return 1
