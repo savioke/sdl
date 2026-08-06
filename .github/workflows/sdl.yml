@@ -9,7 +9,7 @@ on:
     branches: [main]
 jobs:
   validate:
-    # Still @v1 by necessity: @v2 does not exist until the release that this
-    # commit's own PR must pass to reach. Move to @v2 immediately after
-    # release.sh cuts it — that is the last step of the 2.0.0 release.
-    uses: savioke/sdl/.github/workflows/sdl-validate.yml@v1
+    # This repo is a consumer of its own gate, and pins the same moving major
+    # alias every other consumer pins. Move it with each major, once the tag
+    # exists — a PR cannot point at an alias its own release has yet to cut.
+    uses: savioke/sdl/.github/workflows/sdl-validate.yml@v2

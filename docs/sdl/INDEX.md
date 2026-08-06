@@ -21,4 +21,5 @@
 | 2026-08-04-recognize-adoption-diff | recognize-adoption-diff | — | review | 2026-08-04 | A repo's SDL adoption PR cannot pass the gate. |
 | 2026-08-06-determinism-wins | determinism-wins | — | review | 2026-08-06 | Three cycle steps that never needed a model become commands. |
 | 2026-08-06-gate-direct-pushes | gate-direct-pushes | — | review | 2026-08-06 | The gate has never validated a direct push. |
+| 2026-08-06-self-gate-v2 | self-gate-v2 | — | in-progress | 2026-08-06 | Point this repo's own gate at `@v2`, the release that was just cut. |
 | 2026-08-06-use-sub-agent-for-dep-update | use-sub-agent-for-dep-update | — | review | 2026-08-06 | `sdl-dep-update` gains frontmatter that runs it as a backgrounded subagent on Sonnet (`context: fork`, `background: true`, `model: sonnet`) instead of expanding inline into the operator's conversation on the primary model. |
