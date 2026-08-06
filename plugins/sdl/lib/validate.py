@@ -85,11 +85,13 @@ DEP_RECORD = "dep-update.md"
 
 # A pinned uses: line — 40-hex SHA required, version comment optional at parse
 # time (its absence fails the routine tier separately, with a clearer message).
+# `version` is the whole comment version, `major` its leading integer; dep_facts
+# reads both so a record's versions come from the same parse the gate uses.
 PIN_LINE_RE = re.compile(
     r"^\s*(?:-\s+)?uses:\s*"
     r"(?P<action>[\w.-]+/[\w.-]+)(?:/[\w./-]+)?"
     r"@(?P<sha>[0-9a-fA-F]{40})"
-    r"\s*(?:#\s*v?(?P<major>\d+)(?:[.\w-]*))?\s*$"
+    r"\s*(?:#\s*(?P<version>v?(?P<major>\d+)(?:[.\w-]*)))?\s*$"
 )
 
 

@@ -62,7 +62,13 @@ Don't drown the user. If you can answer five of seven from context, ask the rema
 
 Scan `docs/sdl/*/01-requirements.md` and `docs/sdl/*/.sdl-meta.yml` for keyword overlap with this cycle's summary. For matches, list them in `related_cycles` (slug only) and reference them in `01-requirements.md` "Related prior cycles".
 
-Then scan `docs/sdl/*/04-verification.md` files of related cycles for residual risks with `Disposition: defer` or `mitigate-later`. For each, ask the user: "Cycle <slug> deferred '<R-id>: <description>' — does this cycle address it?" Record the answers:
+Then list what earlier cycles left open — don't re-derive it by reading each `04-verification.md`:
+
+```
+python3 <plugin-root>/lib/open_risks.py
+```
+
+It reads every cycle's residual-risk table, keeps the `defer` and `mitigate-later` rows, and drops any that a later cycle already claimed in its `carry_forward:`. What it prints is the live debt, not the whole history. For each item, ask the user: "Cycle <slug> deferred '<R-id>: <description>' — does this cycle address it?" Record the answers:
 
 - **Yes, addressing it.** Add to `carry_forward:` in `.sdl-meta.yml` and reference in `01-requirements.md` "Carried-forward residual risks".
 - **No, still deferred.** Note that the item remains open in the source cycle; do not add to this cycle's `carry_forward`.
