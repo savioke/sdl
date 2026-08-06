@@ -1,6 +1,9 @@
 ---
 name: sdl-dep-update
 description: Author the routine-tier SDL record for a dependency update. Use on a branch or PR whose diff only bumps dependencies (Dependabot, Renovate, scanner, or human version bumps) in a project with a docs/sdl/ folder. Verifies the diff qualifies for the routine tier, runs the deterministic checks, writes a dep-update.md record, and escalates to sdl-spec when a triage trigger applies.
+model: sonnet
+context: fork
+background: true
 ---
 
 # sdl-dep-update
@@ -25,9 +28,10 @@ you personally verified this session.
 Check every escalation trigger from the policy's triage table: major version
 bump, new dependency or changed action `owner/repo`, unpinned ref,
 manifest changes beyond version fields, hand-authored lockfile edits, advisory
-affecting the new version. If any applies, stop and run `sdl-spec` — tell the
-user which trigger fired. Do not write a routine record for an escalation-tier
-change; the validator will reject majors anyway.
+affecting the new version. If any applies, stop and report which trigger fired,
+naming `sdl-spec` as the next step — do not run it yourself. `sdl-spec` is an
+interview and belongs in the main conversation, not here. Do not write a routine
+record for an escalation-tier change; the validator will reject majors anyway.
 
 ### 2. Run the deterministic checks
 
@@ -57,9 +61,16 @@ It creates `docs/sdl/YYYY-MM-DD-<slug>/` with `.sdl-meta.yml` (including
 the updates table (exact old/new versions), checks you actually performed,
 notes.
 
-Regenerate the index (`python3 <plugin-root>/lib/gen_index.py`), run the
-validator (`python3 <plugin-root>/lib/validate.py --base origin/main`), and
-show the user the result.
+Regenerate the index (`python3 <plugin-root>/lib/gen_index.py`) and run the
+validator (`python3 <plugin-root>/lib/validate.py --base origin/main`).
+
+### 5. Report
+
+You run detached from the conversation, so your final message *is* the report —
+nobody watched you work. State: the cycle folder you created, each bump with
+exact old/new versions, which checks you ran and what they returned, the
+validator's verdict, and any trigger that stopped you short of writing a record.
+Name anything you could not verify rather than omitting it.
 
 ## Tone
 
