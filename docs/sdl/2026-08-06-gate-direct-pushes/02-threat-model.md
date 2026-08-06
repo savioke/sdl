@@ -111,6 +111,13 @@
 
 ## Noted for future cycles
 
+- `sdl_ref` is a hand-maintained default that must be bumped in lockstep with
+  every major, and nothing checks that it was. `github.job_workflow_sha` is the
+  commit of the reusable workflow actually running, so deriving the checkout ref
+  from it would make workflow and validator come from one commit by
+  construction. Not done here: it is an unverifiable-by-inspection expression in
+  the highest-blast-radius file in the repo, and this cycle already changes that
+  file substantially.
 - The generated `sdl.yml` hardcodes `branches: [main]`. A repo whose default
   branch is named otherwise gets no push run at all, and therefore silently
   keeps the pre-2.0 gap. Detecting the default branch at adoption time would

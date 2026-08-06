@@ -18,6 +18,15 @@ out of `run:` interpolation into `env:`, explicit read-only `permissions:`,
 consumer workflow's comment is corrected, and the plugin goes to 2.0.0 with a
 changelog entry. The `pull_request` path is untouched.
 
+Because 2.0.0 is the first major, the release surface moved with it: the
+`sdl_ref` input defaults to `v2` so a caller on `@v2` cannot check out a v1
+validator, `sync_to_repo.sh` onboards new repos at `@v2`, and `docs/releasing.md`,
+`docs/admin-setup.md`, and the changelog header describe `@v2` as the alias
+consumers pin. `v1` is documented as end-of-life rather than as an alternative.
+One `@v1` reference remains by necessity: this repo's own `.github/workflows/sdl.yml`
+cannot point at `@v2` until `@v2` exists, or the PR that creates it cannot pass
+its own gate.
+
 ## Mitigations implemented <!-- SI-1 -->
 
 | Threat | Mitigation | Location | Commit |

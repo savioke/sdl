@@ -11,7 +11,10 @@ on:
         description: Ref of savioke/sdl to use for validator code
         required: false
         type: string
-        default: v1
+        # Must track this workflow's own major. A caller on @v2 that checked out
+        # a v1 validator would pass --push to a validator that has no such flag
+        # and fail every direct push on an argparse error.
+        default: v2
 
 permissions:
   contents: read

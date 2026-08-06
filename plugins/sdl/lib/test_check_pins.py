@@ -21,7 +21,7 @@ jobs:
       - uses: ./local/action
       - uses: docker://alpine:3.20
       - name: reusable
-        uses: savioke/sdl/.github/workflows/sdl-validate.yml@v1
+        uses: savioke/sdl/.github/workflows/sdl-validate.yml@v2
       - uses: actions/setup-python@{SHA_B}
 """
 
@@ -42,7 +42,7 @@ class ParsePins(unittest.TestCase):
 
     def test_reusable_workflow_action_is_owner_repo(self):
         self.assertEqual(self.pins[1].action, "savioke/sdl")
-        self.assertEqual(self.pins[1].ref, "v1")
+        self.assertEqual(self.pins[1].ref, "v2")
 
     def test_non_version_comment_gives_none(self):
         pins = cp.parse_pins(f"uses: a/b@{SHA_A} # pinned last tuesday", "w.yml")

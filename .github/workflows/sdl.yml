@@ -1,12 +1,15 @@
 name: sdl
 on:
   pull_request:
-  # Branch-filtered deliberately: an unfiltered push also fires on tag pushes,
-  # where the validator has nothing to say — it diffs against origin/main, so a
-  # release tag yields an empty diff and a vacuous pass, and a tag cut anywhere
-  # else demands a cycle for a push that changed no code.
+  # The pull_request run is the gate. The push run exists to catch code that
+  # reached main without one — a direct push — and skips anything that arrived
+  # through a merged PR. Branch-filtered deliberately: an unfiltered push also
+  # fires on tag pushes, where there is nothing to validate.
   push:
     branches: [main]
 jobs:
   validate:
+    # Still @v1 by necessity: @v2 does not exist until the release that this
+    # commit's own PR must pass to reach. Move to @v2 immediately after
+    # release.sh cuts it — that is the last step of the 2.0.0 release.
     uses: savioke/sdl/.github/workflows/sdl-validate.yml@v1

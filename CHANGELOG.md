@@ -2,10 +2,14 @@
 
 What changed in each release of `savioke/sdl`, newest first.
 
-Consumer repos pin the moving `@v1` alias, so a release reaches their CI without
-them changing anything — this file is how they find out what moved. Every entry
-notes whether it can turn a previously-passing PR red. See `docs/releasing.md`
-for the compatibility contract and the release procedure.
+Consumer repos pin the moving major alias (`@v2`), so a release reaches their CI
+without them changing anything — this file is how they find out what moved. Every
+entry notes whether it can turn a previously-passing PR red. See
+`docs/releasing.md` for the compatibility contract and the release procedure.
+
+Entries below 2.0.0 describe the `v1` line and refer to `@v1` as it was current
+at the time. They are left as written: a changelog is a record of what shipped,
+not a description of the present. `v1` is end-of-life — see 2.0.0.
 
 Versions are the plugin's (`plugins/sdl/.claude-plugin/plugin.json`); each is
 tagged `vX.Y.Z` and, for the current major, aliased by `vX`.
@@ -14,8 +18,12 @@ tagged `vX.Y.Z` and, for the current major, aliased by `vX`.
 
 **Breaking.** A direct push of code to the default branch now fails the gate
 unless the push carries an SDL cycle. Nothing else changes what passes: pull
-requests are validated exactly as before. `v1` stays where it is; move a repo to
-`@v2` when you want this.
+requests are validated exactly as before.
+
+**`v1` is end-of-life.** The `v1` alias is left where it is so nothing breaks
+mid-flight, but it is not maintained: it contains a `push` run that validates
+nothing, which is the defect this release exists to fix. Move every repo to
+`@v2`. New adoptions get `@v2` automatically.
 
 ### The gate now sees direct pushes
 
@@ -67,7 +75,7 @@ by anything.
 
 ### Upgrading
 
-Point your `sdl.yml` at `@v2`:
+Point your `sdl.yml` at `@v2` — one line, and the only required step:
 
 ```yaml
 uses: savioke/sdl/.github/workflows/sdl-validate.yml@v2
@@ -78,7 +86,13 @@ Then, before you push code straight to `main`, scaffold a cycle for it with
 unaffected — the requirement applies to source files, `.github/workflows/`, and
 skill definitions.
 
-Staying on `@v1` keeps the old behavior, including the vacuous push run.
+If your `sdl.yml` also passes `sdl_ref`, move it to `v2` as well; leaving it at
+`v1` pairs the v2 workflow with a v1 validator that does not understand
+`--push`. Repos that pass nothing get the right default.
+
+Repos whose default branch is not named `main` should change `branches: [main]`
+in their own `sdl.yml`; otherwise the push run never fires and the gap this
+release closes stays open there.
 
 ## 1.3.0 — 2026-08-06
 
@@ -140,6 +154,11 @@ you invoke the skills as usual you get the faster path automatically. Running
 them by hand is supported — each takes `--help`.
 
 ## 1.2.0 — 2026-08-06
+
+**Never tagged.** 1.3.0 was released before this version was, and `release.sh`
+reads whatever `plugin.json` says at release time, so no `v1.2.0` tag exists.
+Everything below shipped inside `v1.3.0`. Kept as a record of what changed and
+when; do not go looking for the tag.
 
 **Not breaking.** The gate is untouched — no PR that passed before fails now.
 

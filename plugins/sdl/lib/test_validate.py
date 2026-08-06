@@ -241,7 +241,7 @@ on:
     branches: [main]
 jobs:
   validate:
-    uses: savioke/sdl/.github/workflows/sdl-validate.yml@v1
+    uses: savioke/sdl/.github/workflows/sdl-validate.yml@v2
 """
 
 

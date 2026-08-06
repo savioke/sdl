@@ -66,6 +66,17 @@
   while reporting green. Rewritten as an `if` block with a comment recording
   why. This is the same failure shape the cycle exists to fix, reintroduced one
   layer up.
+- **`sdl_ref` still defaulted to `v1`, pairing a v2 workflow with a v1
+  validator.** `sdl-validate.yml` checks out `savioke/sdl` at `inputs.sdl_ref`
+  for the validator code. Left at `v1`, a consumer calling `sdl-validate.yml@v2`
+  would run the new workflow against the old `validate.py`, which has no
+  `--push` flag — every direct push would die on an argparse error. The failure
+  is loud and fails closed (a red gate, not a bypass), but it would have broken
+  the release for every consumer on the day they upgraded. Default moved to
+  `v2`, with a comment stating that it must track the workflow's own major.
+  Found while working out the release procedure, not by a test — recorded in
+  02 "Noted for future cycles" as an argument for deriving the ref from
+  `github.job_workflow_sha` instead of a hand-maintained default.
 
 ## Static analysis and SBOM <!-- SVV-3, SM-9 -->
 
@@ -94,6 +105,7 @@
 |-----|-------------|----------|-------------|----------------------|
 | R1  | The generated consumer `sdl.yml` hardcodes `branches: [main]`. A repo whose default branch is named otherwise gets no push run and silently retains the pre-2.0 gap — the failure is invisible, since an absent trigger produces no output to notice. | medium | mitigate-later | Detect the default branch during `sync_to_repo.sh` adoption and write it into the generated workflow. Until then the generated file carries a comment telling the adopter to change it. |
 | R2  | The whole push path is unexercised against real GitHub events. The PR-association call, the `before` sentinel, and the force-push branch were verified against the live API and in scratch repos, but no actual `push` event has run this workflow. A mistake in the resolve step most likely shows as validating when it should skip (noisy, safe) rather than the reverse. | medium | mitigate-later | Watch the first direct push and the first PR merge after this repo moves to `@v2`; confirm the skip message names the PR and that a direct push is caught. |
+| R3a | `sdl_ref` must be bumped by hand at every major, and nothing verifies it matches the workflow's own version. This cycle's near-miss (see Defects) is the first instance; the next major has the same trap. | medium | mitigate-later | Derive the checkout ref from `github.job_workflow_sha` so the two cannot diverge, or add a `check_release.py` assertion that `sdl_ref`'s default matches `plugin.json`'s major. |
 | R3  | Only the head commit's PR association is checked. A push containing several commits where just the tip came from a PR would be skipped wholesale. Not reachable through GitHub's merge UI, but reachable by hand. | low | accept | Revisit if a repo adopts a workflow that pushes mixed batches to the default branch. |
 | R4  | `validate.py` is stdlib-only, but the gate as a whole now depends on `gh` and the GitHub API at runtime. An API outage makes every push run validate rather than skip — safe, but it means a merge could fail the push run for want of a cycle declaring `branch: main`. | low | accept | Failure direction is toward checking. Revisit if outage-driven noise is ever observed. |
 

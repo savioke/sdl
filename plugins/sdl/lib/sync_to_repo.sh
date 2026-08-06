@@ -13,7 +13,7 @@
 set -euo pipefail
 
 PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SDL_REF="${SDL_REF:-v1}"
+SDL_REF="${SDL_REF:-v2}"
 # Interpolated into generated YAML; restrict to git-ref characters so a
 # crafted value can't inject workflow content.
 [[ "$SDL_REF" =~ ^[A-Za-z0-9._/-]+$ ]] || { echo "xx invalid SDL_REF: $SDL_REF" >&2; exit 1; }
