@@ -22,7 +22,9 @@ If `docs/sdl/` is missing (user explicitly asked — see preconditions), run the
 bash <plugin-root>/lib/sync_to_repo.sh .
 ```
 
-It writes `.github/workflows/sdl.yml` (the CI gate), `docs/sdl/.gitkeep`, and a `docs/sdl/baseline.md` stub; it refuses to overwrite existing files. Do not hand-write these — the script keeps setup deterministic. Tell the user what was added and that it should be committed, then continue below to fill the baseline.
+It writes `.github/workflows/sdl.yml` (the CI gate), `docs/sdl/.gitkeep`, and a `docs/sdl/baseline.md` stub; it refuses to overwrite existing files. Do not hand-write these — the script keeps setup deterministic. Tell the user what was added, then continue below to fill the baseline.
+
+**Commit the scaffold and the filled baseline together.** The gate counts `sdl.yml` as code, so the adoption PR would otherwise demand a cycle that cannot exist yet. The validator recognizes an adoption diff — one that adds `sdl.yml` and `docs/sdl/baseline.md` and touches nothing else outside `docs/sdl/` — and waives the cycle requirement, but only once the baseline has real content. A pushed stub fails the gate. Do not scaffold a cycle to get around this; fill the baseline.
 
 ### 1. Scan the codebase once
 

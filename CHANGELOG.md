@@ -10,6 +10,42 @@ for the compatibility contract and the release procedure.
 Versions are the plugin's (`plugins/sdl/.claude-plugin/plugin.json`); each is
 tagged `vX.Y.Z` and, for the current major, aliased by `vX`.
 
+## 1.1.0 — 2026-08-04
+
+**Not breaking.** Only widens what passes: an adoption PR that failed the gate
+now succeeds. Nothing that passed before fails now.
+
+### Gate (reaches consumer CI via `@v1`)
+
+- **A repo's SDL adoption PR no longer needs a cycle.** It installs
+  `.github/workflows/sdl.yml`, which the gate counts as code — so it demanded a
+  cycle that by definition cannot exist yet, and the fix was a decoy cycle
+  documenting the act of enrolling. The validator now recognizes the adoption
+  diff and takes `docs/sdl/baseline.md` as its artifact.
+
+  The exemption is narrow on purpose. It applies only to a diff that **adds**
+  both `sdl.yml` and `baseline.md` and touches nothing else outside `docs/sdl/`;
+  the workflow must be the generated caller (every `uses:` resolves to
+  `savioke/sdl/.github/workflows/sdl-validate.yml`, no inline `run:`); and the
+  baseline must have real content, not the stub. Because it fires only while
+  `baseline.md` is being added, a repo can reach it once and never again.
+- Two clearer failures in the same area: an adoption PR carrying a stub baseline
+  now says so and names the `sdl-baseline` skill, and the missing-cycle message
+  no longer reads as if the gate were demanding a particular branch name.
+
+### Skills and scaffolding
+
+- `sdl-baseline` and `sync-to-repo.sh` now direct you to fill the baseline
+  *before* the adoption commit, so the scaffold and the filled baseline land in
+  one PR. Splitting them across two PRs fails the gate on the first.
+
+### Upgrading
+
+- **Consumer repos:** nothing to do; `@v1` picks this up. A repo mid-adoption
+  with a red gate can drop its decoy cycle, or keep it — a real cycle still
+  satisfies the gate and takes precedence over the exemption.
+- **Claude Code:** `/plugin marketplace update relay`, then reload.
+
 ## 1.0.1 — 2026-08-04
 
 **Not breaking.** Removes gate runs that never validated anything; no PR outcome changes.
