@@ -66,6 +66,46 @@ class Changelog(unittest.TestCase):
         self.assertFalse(cr.changelog_has_entry("released 1.4.0 yesterday", "1.4.0"))
 
 
+class MajorRefs(unittest.TestCase):
+    REUSABLE = ("on:\n"
+                "  workflow_call:\n"
+                "    inputs:\n"
+                "      base:\n"
+                "        type: string\n"
+                "        default: origin/main\n"
+                "      sdl_ref:\n"
+                "        type: string\n"
+                "        # Must track this workflow's own major.\n"
+                "        default: v2\n")
+
+    def test_reads_the_default_of_the_sdl_ref_input(self):
+        self.assertEqual(cr.sdl_ref_default(self.REUSABLE), "v2")
+
+    def test_a_sibling_inputs_default_is_not_read_as_sdl_ref(self):
+        text = ("    inputs:\n"
+                "      sdl_ref:\n"
+                "        type: string\n"
+                "      base:\n"
+                "        default: origin/main\n")
+        self.assertIsNone(cr.sdl_ref_default(text))
+
+    def test_sdl_ref_without_a_default(self):
+        self.assertIsNone(cr.sdl_ref_default(
+            self.REUSABLE.replace("        default: v2\n", "")))
+
+    def test_no_sdl_ref_input_at_all(self):
+        self.assertIsNone(cr.sdl_ref_default("name: x\n"))
+
+    def test_reads_the_caller_uses_ref(self):
+        self.assertEqual(cr.caller_ref(
+            "jobs:\n  validate:\n"
+            "    uses: savioke/sdl/.github/workflows/sdl-validate.yml@v2\n"), "v2")
+
+    def test_an_unrelated_uses_line_is_not_the_caller(self):
+        self.assertIsNone(cr.caller_ref(
+            "      - uses: actions/checkout@v7.0.1 # v7.0.1\n"))
+
+
 class ManifestCheck(unittest.TestCase):
     def test_agreement(self):
         self.assertEqual(cr.check_manifest(manifest(), "sdl", "1.0.0"), [])
@@ -199,6 +239,31 @@ class FetchManifest(unittest.TestCase):
         self.assertEqual(cr.check_manifest(data, "sdl", "1.0.0"), [])
 
 
+CALLER_YML = """name: sdl
+on:
+  pull_request:
+jobs:
+  validate:
+    uses: savioke/sdl/.github/workflows/sdl-validate.yml@{ref}
+"""
+
+# `base` deliberately precedes `sdl_ref` and carries a `default:` of its own:
+# that is the shape a whole-file search for `default:` reads wrongly.
+REUSABLE_YML = """name: sdl-validate
+on:
+  workflow_call:
+    inputs:
+      base:
+        required: false
+        type: string
+        default: origin/main
+      sdl_ref:
+        required: false
+        type: string
+        default: {ref}
+"""
+
+
 class GitFixture(unittest.TestCase):
     """Builds a throwaway repo so the git-touching paths are covered for real."""
 
@@ -212,8 +277,15 @@ class GitFixture(unittest.TestCase):
         self.git("config", "commit.gpgsign", "false")
         (self.repo / "plugins/sdl/.claude-plugin").mkdir(parents=True)
         self.write_version("1.0.0")
+        self.write_workflows("v1")
         (self.repo / "CHANGELOG.md").write_text("# Changelog\n\n## 1.0.0\n\nfirst\n")
         self.commit("initial")
+
+    def write_workflows(self, ref, caller_ref=None):
+        workflows = self.repo / ".github/workflows"
+        workflows.mkdir(parents=True, exist_ok=True)
+        (workflows / "sdl.yml").write_text(CALLER_YML.format(ref=caller_ref or ref))
+        (workflows / "sdl-validate.yml").write_text(REUSABLE_YML.format(ref=ref))
 
     def git(self, *args):
         subprocess.run(["git", "-C", str(self.repo), *args], check=True,
@@ -312,6 +384,45 @@ class ReleasedMode(GitFixture):
         self.assertEqual(errors, [])
         self.assertTrue(any("unreachable" in n for n in notes))
 
+    def test_validator_ref_left_on_the_previous_major_is_drift(self):
+        self.write_version("2.0.0")
+        self.add_changelog("2.0.0")
+        self.write_workflows("v1", caller_ref="v2")
+        self.commit("release 2.0.0 with sdl_ref still on v1")
+        self.tag_release("2.0.0", "v2")
+        errors, _ = self.released()
+        self.assertTrue(any("sdl_ref defaults to 'v1'" in e for e in errors))
+
+    def test_the_caller_may_still_name_the_old_major_on_the_release_commit(self):
+        # release.sh verifies straight after cutting the alias, and the alias
+        # the caller must move to did not exist until this very commit.
+        self.write_version("2.0.0")
+        self.add_changelog("2.0.0")
+        self.write_workflows("v2", caller_ref="v1")
+        self.commit("release 2.0.0")
+        self.tag_release("2.0.0", "v2")
+        errors, _ = self.released()
+        self.assertEqual(errors, [])
+
+    def test_a_caller_left_on_a_retired_major_is_drift_once_main_moves_on(self):
+        self.write_version("2.0.0")
+        self.add_changelog("2.0.0")
+        self.write_workflows("v2", caller_ref="v1")
+        self.commit("release 2.0.0")
+        self.tag_release("2.0.0", "v2")
+        (self.repo / "docs").mkdir()
+        (self.repo / "docs/notes.md").write_text("work continues\n")
+        self.commit("main moves on without moving the gate")
+        errors, _ = self.released()
+        self.assertTrue(any("still calls @v1" in e for e in errors))
+
+    def test_a_missing_reusable_workflow_is_drift(self):
+        self.tag_release()
+        (self.repo / cr.REUSABLE_WORKFLOW).unlink()
+        self.commit("drop the reusable workflow")
+        errors, _ = self.released()
+        self.assertTrue(any(f"{cr.REUSABLE_WORKFLOW} is missing" in e for e in errors))
+
     def test_disagreeing_marketplace_fails(self):
         self.tag_release()
         with mock.patch.object(cr, "fetch_manifest",
@@ -407,8 +518,8 @@ class PrMode(GitFixture):
         self.assertTrue(any("no version bump required" in n for n in notes))
 
     def test_reusable_workflow_counts_as_shipped(self):
-        (self.repo / ".github/workflows").mkdir(parents=True)
-        (self.repo / ".github/workflows/sdl-validate.yml").write_text("name: x\n")
+        (self.repo / ".github/workflows/sdl-validate.yml").write_text(
+            REUSABLE_YML.format(ref="v1") + "# a consumer-visible edit\n")
         self.commit("change the consumer-facing workflow")
         errors, _ = cr.check_pr(self.repo, "base", "sdl")
         self.assertTrue(any("version did not increase" in e for e in errors))
@@ -428,6 +539,36 @@ class PrMode(GitFixture):
         self.commit("docs only")
         errors, notes = cr.check_pr(self.repo, "base", "sdl")
         self.assertEqual(errors, [])
+        self.assertTrue(any("no version bump required" in n for n in notes))
+
+    def test_a_major_bump_that_forgets_sdl_ref_fails(self):
+        self.write_version("2.0.0")
+        self.add_changelog("2.0.0")
+        self.commit("bump the major, leave sdl_ref behind")
+        errors, _ = cr.check_pr(self.repo, "base", "sdl")
+        self.assertTrue(any("sdl_ref defaults to 'v1'" in e for e in errors))
+
+    def test_a_major_bump_that_moves_sdl_ref_passes(self):
+        # The caller stays on v1 on purpose: it may only move once the v2 alias
+        # exists, which is after this PR merges and is released.
+        self.write_version("2.0.0")
+        self.add_changelog("2.0.0")
+        self.write_workflows("v2", caller_ref="v1")
+        self.commit("bump the major and sdl_ref together")
+        errors, _ = cr.check_pr(self.repo, "base", "sdl")
+        self.assertEqual(errors, [])
+
+    def test_sdl_ref_is_checked_on_a_docs_only_pr_too(self):
+        # The wrong ref is already on the base, so this PR ships nothing and is
+        # told about it anyway — otherwise it goes unseen until the next bump.
+        self.write_workflows("v9")
+        self.commit("a ref nobody is watching")
+        self.git("branch", "-f", "base", "HEAD")
+        (self.repo / "docs").mkdir()
+        (self.repo / "docs/x.md").write_text("prose\n")
+        self.commit("docs only")
+        errors, notes = cr.check_pr(self.repo, "base", "sdl")
+        self.assertTrue(any("sdl_ref defaults to 'v9'" in e for e in errors))
         self.assertTrue(any("no version bump required" in n for n in notes))
 
     def test_missing_base_ref_is_reported(self):

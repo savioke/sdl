@@ -64,8 +64,10 @@ The plugin cache is keyed by version (`~/.claude/plugins/cache/<marketplace>/<pl
 
 ## What CI checks
 
-- **On a PR** — if the diff touches shipped content, the version must have increased against the base branch and have a changelog entry. This is what enforces step 2.
-- **Daily (and on demand)** — the declared version has an immutable tag, the `vX` alias points at the same commit, no shipped file has changed since that tag, and the marketplace manifest names that exact version and tag. A manifest that cannot be fetched warns rather than fails; an outage is not drift.
+- **On a PR** — if the diff touches shipped content, the version must have increased against the base branch and have a changelog entry. This is what enforces step 2. Whatever the diff touches, `sdl-validate.yml`'s `sdl_ref` default must name the major `plugin.json` declares: the two ship from one commit, so a major bump that leaves `sdl_ref` behind hands every consumer a vN workflow running the v(N-1) validator.
+- **Daily (and on demand)** — the declared version has an immutable tag, the `vX` alias points at the same commit, no shipped file has changed since that tag, the marketplace manifest names that exact version and tag, and both hand-maintained major refs — `sdl_ref` and this repo's own `sdl.yml` — name `vX`. A manifest that cannot be fetched warns rather than fails; an outage is not drift.
+
+The `sdl.yml` half is skipped while `main` still sits on the release commit. Step 3 cuts the alias that this repo's own gate must move to, so on that commit the caller legitimately still names the previous major; the check starts asking once `main` moves on. Nothing else detects a repo left on a retired alias — it keeps resolving and keeps reporting green under the rules it shipped with.
 
 Released-mode does not run on push to `main`, deliberately: between a merge and its release, every one of those conditions is transient, and failing there would block the release the script is waiting to make. The cost is that "merged but never released" takes up to a day to surface rather than being instant. Releasing right after the merge is what actually prevents it.
 

@@ -13,12 +13,15 @@ Two modes:
         Ran on pull requests. If the diff touches shipped content, the version
         in plugin.json must be higher than the base branch's and must have a
         CHANGELOG entry. Enforces "the version bump happens in the change PR".
+        Whatever the diff touches, the reusable workflow's `sdl_ref` default
+        must name the major plugin.json declares.
 
     check_release.py --mode released
         Ran on main. The declared version must have an immutable tag, the `vX`
         alias must point at the same commit, no shipped content may have
-        changed since that tag, and the marketplace manifest must pin exactly
-        that version and tag.
+        changed since that tag, the marketplace manifest must pin exactly that
+        version and tag, and both hand-maintained major refs — `sdl_ref` and
+        this repo's own gate — must name `vX`.
 
 CI deliberately only *detects*; releasing is a maintainer-run script
 (scripts/release.sh) so no CI credential can write to the distribution channel
@@ -45,6 +48,18 @@ SHIPPING_PATHS = ("plugins/sdl", ".github/workflows/sdl-validate.yml")
 
 PLUGIN_JSON = "plugins/sdl/.claude-plugin/plugin.json"
 CHANGELOG = "CHANGELOG.md"
+
+# The two refs that name a major by hand. `sdl_ref` is the validator every
+# consumer checks out; the caller's `uses:` is the alias this repo pins its own
+# gate at. Nothing else cross-checks either against the version being released.
+REUSABLE_WORKFLOW = ".github/workflows/sdl-validate.yml"
+CALLER_WORKFLOW = ".github/workflows/sdl.yml"
+
+CALLER_USES_RE = re.compile(
+    r"^\s*(?:-\s+)?uses:\s*savioke/sdl/\.github/workflows/sdl-validate\.yml"
+    r"@(?P<ref>[\w./-]+)\s*$", re.MULTILINE)
+SDL_REF_KEY_RE = re.compile(r"^(?P<indent>\s*)sdl_ref:\s*$")
+INPUT_DEFAULT_RE = re.compile(r"^\s*default:\s*(?P<ref>\S+)\s*$")
 
 DEFAULT_MARKETPLACE_REPO = "savioke/relay-plugin-marketplace"
 MARKETPLACE_PATH = ".claude-plugin/marketplace.json"
@@ -73,6 +88,79 @@ def changelog_has_entry(text: str, version: str) -> bool:
     a date), so consumers reading a moved alias can find out what changed."""
     pattern = re.compile(rf"^##\s+v?{re.escape(version)}\b", re.MULTILINE)
     return bool(pattern.search(text))
+
+
+def caller_ref(text: str) -> str | None:
+    """The ref the caller workflow pins the reusable workflow at."""
+    m = CALLER_USES_RE.search(text)
+    return m.group("ref") if m else None
+
+
+def sdl_ref_default(text: str) -> str | None:
+    """The `default:` of the reusable workflow's `sdl_ref` input.
+
+    Read as the indented block under `sdl_ref:` rather than by searching the
+    whole file: `base` declares a `default:` too, and matching that one would
+    compare the wrong ref. Stdlib only, so no YAML parser to lean on.
+    """
+    lines = text.splitlines()
+    for i, line in enumerate(lines):
+        key = SDL_REF_KEY_RE.match(line)
+        if not key:
+            continue
+        indent = len(key.group("indent"))
+        for follow in lines[i + 1:]:
+            if not follow.strip():
+                continue
+            if len(follow) - len(follow.lstrip()) <= indent:
+                break
+            found = INPUT_DEFAULT_RE.match(follow)
+            if found:
+                return found.group("ref")
+    return None
+
+
+def check_validator_ref(repo: Path, major: str) -> list[str]:
+    """The reusable workflow must check the validator out at its own major.
+
+    Left behind, a consumer calling `@vN` runs the vN workflow against the
+    v(N-1) validator — the near-miss recorded in cycle
+    2026-08-06-gate-direct-pushes, caught by hand rather than by a check.
+    """
+    path = repo / REUSABLE_WORKFLOW
+    if not path.is_file():
+        return [f"{REUSABLE_WORKFLOW} is missing — nothing declares which "
+                f"validator consumers check out"]
+    ref = sdl_ref_default(path.read_text(encoding="utf-8", errors="replace"))
+    if ref is None:
+        return [f"{REUSABLE_WORKFLOW}: no `sdl_ref` input with a `default:` — "
+                f"it must default to {major}, the major this repo releases"]
+    if ref != major:
+        return [f"{REUSABLE_WORKFLOW}: sdl_ref defaults to {ref!r} but this repo "
+                f"releases {major} — a consumer calling @{major} would run the "
+                f"{major} workflow against the {ref} validator"]
+    return []
+
+
+def check_caller_ref(repo: Path, major: str) -> list[str]:
+    """This repo's own gate must call the major it releases.
+
+    A retired alias keeps resolving and keeps reporting green under the old
+    rules, so the repo goes on passing a gate it no longer ships.
+    """
+    path = repo / CALLER_WORKFLOW
+    if not path.is_file():
+        return [f"{CALLER_WORKFLOW} is missing — this repo is not running its "
+                f"own gate"]
+    ref = caller_ref(path.read_text(encoding="utf-8", errors="replace"))
+    if ref is None:
+        return [f"{CALLER_WORKFLOW}: no `uses:` line calling {REUSABLE_WORKFLOW} "
+                f"— this repo must call its own gate at {major}"]
+    if ref != major:
+        return [f"{CALLER_WORKFLOW}: this repo's own gate still calls @{ref} but "
+                f"it releases {major} — @{ref} is retired and validates under "
+                f"the rules it shipped with"]
+    return []
 
 
 def manifest_entry(manifest: object, plugin: str) -> dict | None:
@@ -188,6 +276,10 @@ def check_pr(repo: Path, base: str, plugin: str) -> tuple[list[str], list[str]]:
         return ([f"base ref {base!r} not found — fetch it (checkout with fetch-depth: 0)"],
                 notes)
 
+    # Not gated on the diff: the reusable workflow and plugin.json ship from the
+    # same commit, so there is no state in which they may name different majors.
+    errors.extend(check_validator_ref(repo, f"v{head_parsed[0]}"))
+
     changed = shipping_changes(repo, base)
     if not changed:
         notes.append(f"no shipped content changed vs {base}; no version bump required")
@@ -233,6 +325,8 @@ def check_released(repo: Path, plugin: str, marketplace_repo: str,
         return ([f"{PLUGIN_JSON}: version is missing or not X.Y.Z"], notes)
     tag, alias = f"v{version}", f"v{parsed[0]}"
 
+    errors.extend(check_validator_ref(repo, alias))
+
     changelog = repo / CHANGELOG
     if not changelog.is_file():
         errors.append(f"{CHANGELOG} is missing")
@@ -264,6 +358,11 @@ def check_released(repo: Path, plugin: str, marketplace_repo: str,
             errors.append(
                 f"alias {alias} points at {alias_commit[:9]} but {tag} is {tag_commit[:9]} "
                 f"— consumer CI is running a different tree than the plugin channel")
+        # A major cuts the alias the caller must move to, so on the release
+        # commit itself the caller legitimately still names the previous major
+        # (see the comment in sdl.yml). Check once main has moved past it.
+        if alias_commit != git("rev-parse", "HEAD", repo=repo):
+            errors.extend(check_caller_ref(repo, alias))
     notes.append(f"{tag} = {tag_commit[:9]}")
 
     if offline:
