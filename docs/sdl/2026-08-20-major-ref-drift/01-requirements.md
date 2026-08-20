@@ -2,7 +2,7 @@
 
 ## Summary
 
-Two refs in this repo name a major by hand, and nothing cross-checks either against the version being released: `sdl-validate.yml`'s `sdl_ref` input default, which is the validator every consumer checks out, and `sdl.yml`'s `uses:` ref, which is the alias this repo pins its own gate at. `check_release.py` exists to detect exactly this class of drift and does not look at either. This cycle adds both assertions, closing `gate-direct-pushes:R3a` and the first half of `self-gate-v2:R2`.
+`check_release.py` detects release drift and never looked at the two refs that name a major by hand. Those are `sdl-validate.yml`'s `sdl_ref` default, the validator every consumer checks out, and `sdl.yml`'s `uses:` ref, the alias this repo pins its own gate at; nothing cross-checks either against the version being released. This cycle adds both assertions, closing `gate-direct-pushes:R3a` and the first half of `self-gate-v2:R2`.
 
 ## Scope
 
