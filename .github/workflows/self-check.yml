@@ -94,6 +94,7 @@ jobs:
           set -e
           for f in \
             plugins/sdl/.claude-plugin/plugin.json \
+            plugins/sdl/.codex-plugin/plugin.json \
             plugins/sdl/skills/sdl-spec/SKILL.md \
             plugins/sdl/skills/sdl-threat-model/SKILL.md \
             plugins/sdl/skills/sdl-review/SKILL.md \
@@ -133,3 +134,4 @@ jobs:
       - name: JSON parses
         run: |
           python -c "import json; json.load(open('plugins/sdl/.claude-plugin/plugin.json'))"
+          python -c "import json; json.load(open('plugins/sdl/.codex-plugin/plugin.json'))"

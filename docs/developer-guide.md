@@ -4,7 +4,7 @@ What you need to know to work on a project that uses our SDL governance.
 
 ## What it is
 
-A lightweight evidence trail for IEC 62443-4-1. Each branch/PR generates a folder under `docs/sdl/` with four short markdown files. The agent (Claude Code or Copilot) writes them. You review and edit.
+A lightweight evidence trail for IEC 62443-4-1. Each branch/PR generates a folder under `docs/sdl/` with four short markdown files. The agent (Claude Code, Codex, or Copilot) writes them. You review and edit.
 
 ## What you do
 
@@ -29,26 +29,41 @@ That's it. No forms, no Jira tickets, no separate security reviews unless someth
 
 That's the whole install — skills, templates, and tooling arrive as one plugin. To update: `/plugin marketplace update relay` and reload when prompted.
 
-**Copilot or other agents.** These have no marketplace path, so they read the skills from a local clone:
+**Codex CLI.** In a shell:
+
+```
+codex plugin marketplace add savioke/relay-plugin-marketplace
+codex plugin add sdl@relay
+```
+
+Start a new Codex session after installation. To update, run `codex plugin marketplace upgrade relay` and start another new session.
+
+**Copilot or other agents.** These read the skills from a local clone:
 
 ```
 gh repo clone savioke/sdl ~/.sdl-governance
 ~/.sdl-governance/scripts/install.sh
 ```
 
-The script symlinks skills into Copilot and also sets up Claude Code as above. To update: `cd ~/.sdl-governance && git pull` (Copilot sees it immediately; Claude Code still updates via `/plugin marketplace update relay`).
+The script symlinks skills into Copilot and also sets up Claude Code and Codex as above when their CLIs are available. To update: `cd ~/.sdl-governance && git pull` (Copilot sees it immediately; Claude Code and Codex still update through their marketplaces).
 
 If your clone predates 1.0.0, re-run `scripts/install.sh` once after that pull. Skills moved to `plugins/sdl/skills/`, so a symlink created earlier points at a path that no longer exists — Copilot loads no skills and says nothing about it. `ls -la ~/.copilot/skills/sdl` shows whether yours needs it.
 
 ## Per-repo setup (run once when a repo first adopts SDL)
 
-This step needs the clone (see "Copilot or other agents" above), even if you otherwise use only Claude Code:
+With the Claude Code or Codex plugin installed, ask the agent to "initialize SDL
+in this repo." The `sdl-baseline` skill scaffolds the workflow and `docs/sdl/`
+before it authors the baseline; no clone is needed.
+
+For a clone-based install, run:
 
 ```
 ~/.sdl-governance/scripts/sync-to-repo.sh /path/to/your/repo
 ```
 
-Drops `.github/workflows/sdl.yml`, creates `docs/sdl/`, and writes a `docs/sdl/baseline.md` stub. Then run `sdl-baseline` once (see step 0 above) to fill the baseline, and commit the scaffold and the filled baseline together.
+The script drops `.github/workflows/sdl.yml`, creates `docs/sdl/`, and writes a
+`docs/sdl/baseline.md` stub. Then run `sdl-baseline` once (see step 0 above) to
+fill the baseline, and commit the scaffold and the filled baseline together.
 
 That adoption PR needs no cycle: the gate counts `sdl.yml` as code, but it recognizes a diff that adds the workflow and the baseline and touches nothing else outside `docs/sdl/`, and takes the baseline as the artifact. It waives the cycle only for a baseline with real content — push the stub alone and the gate fails asking you to fill it. Bundle any other change into a later PR; mixing code into the adoption PR puts you back on the ordinary path of needing a cycle.
 

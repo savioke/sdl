@@ -1,0 +1,31 @@
+{
+  "name": "sdl",
+  "version": "2.1.0",
+  "description": "Scaffold and review SDL artifacts (IEC 62443-4-1 aligned) per feature branch.",
+  "author": {
+    "name": "Relay"
+  },
+  "repository": "https://github.com/savioke/sdl",
+  "keywords": [
+    "security",
+    "sdl",
+    "iec-62443"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "SDL Governance",
+    "shortDescription": "Create and review IEC 62443-aligned SDL evidence.",
+    "longDescription": "Scaffold per-feature SDL evidence, threat-model security-relevant changes, and review implementation diffs against the recorded mitigations.",
+    "developerName": "Relay",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Initialize the SDL baseline for this repository.",
+      "Create the SDL cycle for this feature.",
+      "Review this diff and update its SDL evidence."
+    ]
+  }
+}

@@ -3,7 +3,7 @@
 
 This repo ships executable content over two channels (docs/releasing.md):
 consumer CI pins the reusable workflow at the moving `vX` alias, and the Claude
-Code plugin is pinned by exactly one marketplace manifest at an immutable
+Code and Codex plugins are pinned by marketplace manifests at an immutable
 `vX.Y.Z`. Drift between them is invisible until it breaks someone else's CI or
 silently withholds a fix from developer machines, so CI checks for it.
 
@@ -11,14 +11,15 @@ Two modes:
 
     check_release.py --mode pr --base origin/main
         Ran on pull requests. If the diff touches shipped content, the version
-        in plugin.json must be higher than the base branch's and must have a
-        CHANGELOG entry. Enforces "the version bump happens in the change PR".
+        in both plugin manifests must be higher than the base branch's and must
+        have a CHANGELOG entry. Enforces "the version bump happens in the
+        change PR".
 
     check_release.py --mode released
         Ran on main. The declared version must have an immutable tag, the `vX`
         alias must point at the same commit, no shipped content may have
-        changed since that tag, and the marketplace manifest must pin exactly
-        that version and tag.
+        changed since that tag, and both marketplace manifests must pin exactly
+        that tag (and the Claude catalog must name the version).
 
 CI deliberately only *detects*; releasing is a maintainer-run script
 (scripts/release.sh) so no CI credential can write to the distribution channel
@@ -44,10 +45,18 @@ from pathlib import Path
 SHIPPING_PATHS = ("plugins/sdl", ".github/workflows/sdl-validate.yml")
 
 PLUGIN_JSON = "plugins/sdl/.claude-plugin/plugin.json"
+CODEX_PLUGIN_JSON = "plugins/sdl/.codex-plugin/plugin.json"
+PLUGIN_JSONS = (PLUGIN_JSON, CODEX_PLUGIN_JSON)
 CHANGELOG = "CHANGELOG.md"
 
 DEFAULT_MARKETPLACE_REPO = "savioke/relay-plugin-marketplace"
-MARKETPLACE_PATH = ".claude-plugin/marketplace.json"
+MARKETPLACE_MANIFESTS = (
+    (".claude-plugin/marketplace.json", True),
+    (".agents/plugins/marketplace.json", False),
+)
+EXPECTED_SOURCE_KIND = "git-subdir"
+EXPECTED_SOURCE_URL = "https://github.com/savioke/sdl.git"
+EXPECTED_SOURCE_PATHS = ("plugins/sdl", "./plugins/sdl")
 MAX_MANIFEST_BYTES = 1_000_000
 
 # Strict three-part semver. No prerelease or build metadata: the version is a
@@ -87,7 +96,8 @@ def manifest_entry(manifest: object, plugin: str) -> dict | None:
     return None
 
 
-def check_manifest(manifest: object, plugin: str, version: str) -> list[str]:
+def check_manifest(manifest: object, plugin: str, version: str,
+                   require_declared_version: bool = True) -> list[str]:
     """Errors describing how the fetched manifest disagrees with this version.
 
     The manifest comes from another repo over the network, so nothing about its
@@ -101,24 +111,40 @@ def check_manifest(manifest: object, plugin: str, version: str) -> list[str]:
         return [f"marketplace manifest has no plugin named {plugin!r}"]
     errors = []
     declared = entry.get("version")
-    if declared != version:
+    if ((require_declared_version and declared != version) or
+            (not require_declared_version and declared is not None and
+             declared != version)):
         errors.append(
             f"marketplace manifest declares {plugin} {declared!r}, repo says {version!r}")
     # `source` is an object in the git-subdir form this plugin uses, but the
     # marketplace schema also allows a bare URL string, so a non-object here is
     # a real shape we must report rather than assume away.
     source = entry.get("source")
-    expected = f"v{version}"
+    expected_ref = f"v{version}"
     if not isinstance(source, dict):
         errors.append(
             f"marketplace manifest gives {plugin} a non-object `source` "
-            f"({type(source).__name__}); expected an object pinning ref {expected!r} "
+            f"({type(source).__name__}); expected an object pinning ref {expected_ref!r} "
             f"(a release must be reachable at exactly one immutable tag)")
-    elif source.get("ref") != expected:
-        errors.append(
-            f"marketplace manifest pins source.ref {source.get('ref')!r}, "
-            f"expected {expected!r} "
-            f"(a release must be reachable at exactly one immutable tag)")
+    else:
+        expected_fields = (
+            ("source", EXPECTED_SOURCE_KIND),
+            ("url", EXPECTED_SOURCE_URL),
+        )
+        for field, expected_value in expected_fields:
+            if source.get(field) != expected_value:
+                errors.append(
+                    f"marketplace manifest pins source.{field} "
+                    f"{source.get(field)!r}, expected {expected_value!r}")
+        if source.get("path") not in EXPECTED_SOURCE_PATHS:
+            errors.append(
+                f"marketplace manifest pins source.path {source.get('path')!r}, "
+                f"expected the plugin subdirectory {EXPECTED_SOURCE_PATHS[0]!r}")
+        if source.get("ref") != expected_ref:
+            errors.append(
+                f"marketplace manifest pins source.ref {source.get('ref')!r}, "
+                f"expected {expected_ref!r} "
+                f"(a release must be reachable at exactly one immutable tag)")
     return errors
 
 
@@ -147,14 +173,15 @@ def file_at_rev(repo: Path, rev: str, path: str) -> str | None:
         return None
 
 
-def fetch_manifest(repo_slug: str, timeout: int = 30) -> tuple[object, str | None]:
+def fetch_manifest(repo_slug: str, path: str = MARKETPLACE_MANIFESTS[0][0],
+                   timeout: int = 30) -> tuple[object, str | None]:
     """Returns (manifest, error). A network failure is an availability problem,
     not evidence of drift — the caller warns rather than failing (SR-8).
 
     The manifest is whatever the responder served, so it is typed `object`, not
     `dict`: valid JSON is not necessarily an object. `check_manifest` is
     responsible for every type check past this point."""
-    url = f"https://raw.githubusercontent.com/{repo_slug}/main/{MARKETPLACE_PATH}"
+    url = f"https://raw.githubusercontent.com/{repo_slug}/main/{path}"
     req = urllib.request.Request(url, headers={"User-Agent": "sdl-check-release"})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -183,6 +210,14 @@ def check_pr(repo: Path, base: str, plugin: str) -> tuple[list[str], list[str]]:
     head_parsed = parse_semver(head_version) if head_version is not None else None
     if head_parsed is None:
         return ([f"{PLUGIN_JSON}: version is missing or not X.Y.Z"], notes)
+
+    codex_path = repo / CODEX_PLUGIN_JSON
+    codex_version = version_from_plugin_json(
+        codex_path.read_text(encoding="utf-8")) if codex_path.is_file() else None
+    if codex_version != head_version:
+        errors.append(
+            f"plugin manifest versions disagree: {PLUGIN_JSON} has {head_version!r}, "
+            f"{CODEX_PLUGIN_JSON} has {codex_version!r}")
 
     if not git_ok("rev-parse", "--verify", f"{base}^{{commit}}", repo=repo):
         return ([f"base ref {base!r} not found — fetch it (checkout with fetch-depth: 0)"],
@@ -231,6 +266,13 @@ def check_released(repo: Path, plugin: str, marketplace_repo: str,
     parsed = parse_semver(version) if version else None
     if parsed is None:
         return ([f"{PLUGIN_JSON}: version is missing or not X.Y.Z"], notes)
+    codex_path = repo / CODEX_PLUGIN_JSON
+    codex_version = version_from_plugin_json(
+        codex_path.read_text(encoding="utf-8")) if codex_path.is_file() else None
+    if codex_version != version:
+        errors.append(
+            f"plugin manifest versions disagree: {PLUGIN_JSON} has {version!r}, "
+            f"{CODEX_PLUGIN_JSON} has {codex_version!r}")
     tag, alias = f"v{version}", f"v{parsed[0]}"
 
     changelog = repo / CHANGELOG
@@ -267,17 +309,21 @@ def check_released(repo: Path, plugin: str, marketplace_repo: str,
     notes.append(f"{tag} = {tag_commit[:9]}")
 
     if offline:
-        notes.append("marketplace check skipped (--offline)")
+        notes.append("marketplace checks skipped (--offline)")
         return (errors, notes)
 
-    manifest, fetch_error = fetch_manifest(marketplace_repo)
-    # Discriminate on the error, not on `manifest is None`: a body of literal
-    # `null` parses to None and is drift, not an outage.
-    if fetch_error is not None:
-        notes.append(f"marketplace manifest unreachable, not checked: {fetch_error}")
-    else:
-        errors.extend(check_manifest(manifest, plugin, version))
-        notes.append(f"marketplace manifest checked ({marketplace_repo})")
+    for path, require_declared_version in MARKETPLACE_MANIFESTS:
+        manifest, fetch_error = fetch_manifest(marketplace_repo, path)
+        # Discriminate on the error, not on `manifest is None`: a body of
+        # literal `null` parses to None and is drift, not an outage.
+        if fetch_error is not None:
+            notes.append(
+                f"marketplace manifest unreachable, not checked ({path}): {fetch_error}")
+        else:
+            errors.extend(check_manifest(
+                manifest, plugin, version,
+                require_declared_version=require_declared_version))
+            notes.append(f"marketplace manifest checked ({marketplace_repo}/{path})")
 
     return (errors, notes)
 
@@ -295,9 +341,10 @@ def main() -> int:
     args = parser.parse_args()
 
     repo = Path(args.repo).resolve()
-    if not (repo / PLUGIN_JSON).is_file():
-        print(f"{PLUGIN_JSON} not found under {repo}", file=sys.stderr)
-        return 1
+    for plugin_json in PLUGIN_JSONS:
+        if not (repo / plugin_json).is_file():
+            print(f"{plugin_json} not found under {repo}", file=sys.stderr)
+            return 1
 
     if args.mode == "pr":
         errors, notes = check_pr(repo, args.base, args.plugin)

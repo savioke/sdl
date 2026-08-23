@@ -20,7 +20,7 @@ def manifest(version="1.0.0", ref="v1.0.0", name="sdl"):
         "plugins": [{
             "name": name,
             "version": version,
-            "source": {"source": "git-subdir", "url": "https://example/x.git",
+            "source": {"source": "git-subdir", "url": cr.EXPECTED_SOURCE_URL,
                        "path": "plugins/sdl", "ref": ref},
         }],
     }
@@ -67,6 +67,19 @@ class Changelog(unittest.TestCase):
 
 
 class ManifestCheck(unittest.TestCase):
+    def assert_source_drift_for_both_catalogs(self, field, value):
+        for require_declared_version in (True, False):
+            with self.subTest(field=field, schema=(
+                    "claude" if require_declared_version else "codex")):
+                doc = manifest()
+                if not require_declared_version:
+                    del doc["plugins"][0]["version"]
+                doc["plugins"][0]["source"][field] = value
+                errors = cr.check_manifest(
+                    doc, "sdl", "1.0.0",
+                    require_declared_version=require_declared_version)
+                self.assertTrue(any(f"source.{field}" in error for error in errors))
+
     def test_agreement(self):
         self.assertEqual(cr.check_manifest(manifest(), "sdl", "1.0.0"), [])
 
@@ -82,10 +95,33 @@ class ManifestCheck(unittest.TestCase):
         errs = cr.check_manifest(manifest(ref="v1"), "sdl", "1.0.0")
         self.assertTrue(any("expected 'v1.0.0'" in e for e in errs))
 
+    def test_source_kind_drift_is_rejected_for_both_catalogs(self):
+        self.assert_source_drift_for_both_catalogs("source", "git")
+
+    def test_source_url_drift_is_rejected_for_both_catalogs(self):
+        self.assert_source_drift_for_both_catalogs(
+            "url", "https://github.com/attacker/sdl.git")
+
+    def test_source_path_drift_is_rejected_for_both_catalogs(self):
+        self.assert_source_drift_for_both_catalogs("path", "plugins/other")
+
     def test_unknown_plugin(self):
         errs = cr.check_manifest(manifest(name="other"), "sdl", "1.0.0")
         self.assertEqual(len(errs), 1)
         self.assertIn("no plugin named", errs[0])
+
+    def test_codex_manifest_does_not_need_a_duplicate_version(self):
+        doc = manifest()
+        del doc["plugins"][0]["version"]
+        doc["plugins"][0]["source"]["path"] = "./plugins/sdl"
+        self.assertEqual(
+            cr.check_manifest(doc, "sdl", "1.0.0", require_declared_version=False), [])
+
+    def test_optional_codex_version_must_agree_when_present(self):
+        errs = cr.check_manifest(
+            manifest(version="0.7.0"), "sdl", "1.0.0",
+            require_declared_version=False)
+        self.assertTrue(any("declares sdl '0.7.0'" in e for e in errs))
 
 
 class MalformedManifest(unittest.TestCase):
@@ -198,6 +234,14 @@ class FetchManifest(unittest.TestCase):
         self.assertIsNone(err)
         self.assertEqual(cr.check_manifest(data, "sdl", "1.0.0"), [])
 
+    def test_fetch_uses_requested_marketplace_path(self):
+        body = json.dumps(manifest()).encode()
+        with mock.patch.object(cr.urllib.request, "urlopen",
+                               return_value=FakeResponse(body)) as urlopen:
+            cr.fetch_manifest("owner/repo", ".agents/plugins/marketplace.json")
+        request = urlopen.call_args.args[0]
+        self.assertTrue(request.full_url.endswith("/.agents/plugins/marketplace.json"))
+
 
 class GitFixture(unittest.TestCase):
     """Builds a throwaway repo so the git-touching paths are covered for real."""
@@ -211,6 +255,7 @@ class GitFixture(unittest.TestCase):
         self.git("config", "user.name", "T")
         self.git("config", "commit.gpgsign", "false")
         (self.repo / "plugins/sdl/.claude-plugin").mkdir(parents=True)
+        (self.repo / "plugins/sdl/.codex-plugin").mkdir(parents=True)
         self.write_version("1.0.0")
         (self.repo / "CHANGELOG.md").write_text("# Changelog\n\n## 1.0.0\n\nfirst\n")
         self.commit("initial")
@@ -220,8 +265,9 @@ class GitFixture(unittest.TestCase):
                        capture_output=True, text=True)
 
     def write_version(self, version):
-        (self.repo / cr.PLUGIN_JSON).write_text(
-            json.dumps({"name": "sdl", "version": version}, indent=2) + "\n")
+        payload = json.dumps({"name": "sdl", "version": version}, indent=2) + "\n"
+        for plugin_json in cr.PLUGIN_JSONS:
+            (self.repo / plugin_json).write_text(payload)
 
     def add_changelog(self, version):
         p = self.repo / "CHANGELOG.md"
@@ -319,6 +365,20 @@ class ReleasedMode(GitFixture):
             errors, _ = self.released(offline=False)
         self.assertTrue(any("source.ref 'main'" in e for e in errors))
 
+    def test_both_host_catalogs_are_checked_with_their_version_rules(self):
+        self.tag_release()
+        codex = manifest()
+        del codex["plugins"][0]["version"]
+        with mock.patch.object(
+                cr, "fetch_manifest",
+                side_effect=[(manifest(), None), (codex, None)]) as fetch:
+            errors, notes = self.released(offline=False)
+        self.assertEqual(errors, [])
+        self.assertEqual(
+            [call.args[1] for call in fetch.call_args_list],
+            [path for path, _ in cr.MARKETPLACE_MANIFESTS])
+        self.assertEqual(sum("marketplace manifest checked" in n for n in notes), 2)
+
 
 class PrMode(GitFixture):
     def setUp(self):
@@ -331,6 +391,13 @@ class PrMode(GitFixture):
         self.commit("ship a validator change")
         errors, _ = cr.check_pr(self.repo, "base", "sdl")
         self.assertTrue(any("version did not increase" in e for e in errors))
+
+    def test_plugin_manifest_versions_must_match(self):
+        (self.repo / cr.CODEX_PLUGIN_JSON).write_text(
+            json.dumps({"name": "sdl", "version": "1.1.0"}, indent=2) + "\n")
+        self.commit("drift the Codex manifest")
+        errors, _ = cr.check_pr(self.repo, "base", "sdl")
+        self.assertTrue(any("plugin manifest versions disagree" in e for e in errors))
 
     def test_shipped_change_with_bump_and_changelog_passes(self):
         (self.repo / "plugins/sdl/lib").mkdir(parents=True)
