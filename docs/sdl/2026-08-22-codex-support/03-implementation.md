@@ -21,7 +21,8 @@ catalogs remain at released v2.0.0 until the 2.1.0 release advances them.
 
 ## Secure coding practices applied <!-- SI-2 -->
 
-- Both local manifest versions are compared before release-side effects.
+- Both local manifest versions and each catalog's source kind, repository URL,
+  and plugin subdirectory are compared before release-side effects.
 - Existing strict semantic-version, shell-quoting, and bounded remote-read
   controls are reused for both catalogs.
 - Catalog paths and Codex CLI subcommands are static; no evaluated input or

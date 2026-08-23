@@ -30,6 +30,9 @@ MANIFEST_PATHS=(
   ".agents/plugins/marketplace.json"
 )
 MANIFEST_REQUIRES_VERSION=("true" "false")
+EXPECTED_SOURCE_KIND="git-subdir"
+EXPECTED_SOURCE_URL="https://github.com/savioke/sdl.git"
+EXPECTED_SOURCE_PATH="plugins/sdl"
 
 log()  { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m!!\033[0m %s\n' "$*" >&2; }
@@ -97,9 +100,11 @@ fi
 # manifest_py runs the identical parse and validation in both modes, so a
 # manifest that passes 'check' here cannot fail 'write' later for shape reasons.
 manifest_py() {
-  python3 - "$1" "$2" "$PLUGIN_NAME" "$version" "$tag" "$3" <<'PY'
+  python3 - "$1" "$2" "$PLUGIN_NAME" "$version" "$tag" "$3" \
+    "$EXPECTED_SOURCE_KIND" "$EXPECTED_SOURCE_URL" "$EXPECTED_SOURCE_PATH" <<'PY'
 import json, sys
 path, mode, plugin, version, tag, require_version = sys.argv[1:7]
+expected_kind, expected_url, expected_path = sys.argv[7:10]
 require_version = require_version == "true"
 
 
@@ -135,6 +140,15 @@ if not isinstance(source, dict):
     # writing a bare {"ref": ...} would push a manifest that resolves to nothing.
     die(f"plugin {plugin!r} has a {type(source).__name__} `source`, expected an "
         f"object — fix the manifest by hand, then re-run")
+if source.get("source") != expected_kind:
+    die(f"plugin {plugin!r} source.source is {source.get('source')!r}, expected "
+        f"{expected_kind!r}")
+if source.get("url") != expected_url:
+    die(f"plugin {plugin!r} source.url is {source.get('url')!r}, expected "
+        f"{expected_url!r}")
+if source.get("path") not in (expected_path, f"./{expected_path}"):
+    die(f"plugin {plugin!r} source.path is {source.get('path')!r}, expected the "
+        f"plugin subdirectory {expected_path!r}")
 
 if mode == "check":
     if require_version:

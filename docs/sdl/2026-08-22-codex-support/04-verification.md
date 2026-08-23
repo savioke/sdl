@@ -28,8 +28,9 @@
 
 - **Finding:** Both fixed catalog paths use bounded reads and structural/type
   checks. The Claude catalog must carry the release version; the Codex catalog
-  may omit its duplicated version but must agree when one is present. Unit tests
-  cover the new behavior and local manifest divergence.
+  may omit its duplicated version but must agree when one is present. Both must
+  retain the expected source kind, repository URL, plugin subdirectory, and
+  immutable tag. Unit tests cover source identity and local manifest drift.
 - **References:** `scripts/check_release.py`, `scripts/test_check_release.py`
 
 ### Workstation command execution
@@ -49,7 +50,7 @@ concurrency, frontend rendering, containers, native memory
 
 - Codex plugin validator: passed.
 - Core plugin/library suite: 144 tests passed.
-- Release-check unit suite: 52 tests passed.
+- Release-check unit suite: 55 tests passed.
 - ShellCheck, changed-Python Ruff, JSON parsing, Bash syntax, whitespace, SDL
   validation, and generated-index checks: passed.
 

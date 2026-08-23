@@ -54,6 +54,9 @@ MARKETPLACE_MANIFESTS = (
     (".claude-plugin/marketplace.json", True),
     (".agents/plugins/marketplace.json", False),
 )
+EXPECTED_SOURCE_KIND = "git-subdir"
+EXPECTED_SOURCE_URL = "https://github.com/savioke/sdl.git"
+EXPECTED_SOURCE_PATHS = ("plugins/sdl", "./plugins/sdl")
 MAX_MANIFEST_BYTES = 1_000_000
 
 # Strict three-part semver. No prerelease or build metadata: the version is a
@@ -117,17 +120,31 @@ def check_manifest(manifest: object, plugin: str, version: str,
     # marketplace schema also allows a bare URL string, so a non-object here is
     # a real shape we must report rather than assume away.
     source = entry.get("source")
-    expected = f"v{version}"
+    expected_ref = f"v{version}"
     if not isinstance(source, dict):
         errors.append(
             f"marketplace manifest gives {plugin} a non-object `source` "
-            f"({type(source).__name__}); expected an object pinning ref {expected!r} "
+            f"({type(source).__name__}); expected an object pinning ref {expected_ref!r} "
             f"(a release must be reachable at exactly one immutable tag)")
-    elif source.get("ref") != expected:
-        errors.append(
-            f"marketplace manifest pins source.ref {source.get('ref')!r}, "
-            f"expected {expected!r} "
-            f"(a release must be reachable at exactly one immutable tag)")
+    else:
+        expected_fields = (
+            ("source", EXPECTED_SOURCE_KIND),
+            ("url", EXPECTED_SOURCE_URL),
+        )
+        for field, expected_value in expected_fields:
+            if source.get(field) != expected_value:
+                errors.append(
+                    f"marketplace manifest pins source.{field} "
+                    f"{source.get(field)!r}, expected {expected_value!r}")
+        if source.get("path") not in EXPECTED_SOURCE_PATHS:
+            errors.append(
+                f"marketplace manifest pins source.path {source.get('path')!r}, "
+                f"expected the plugin subdirectory {EXPECTED_SOURCE_PATHS[0]!r}")
+        if source.get("ref") != expected_ref:
+            errors.append(
+                f"marketplace manifest pins source.ref {source.get('ref')!r}, "
+                f"expected {expected_ref!r} "
+                f"(a release must be reachable at exactly one immutable tag)")
     return errors
 
 

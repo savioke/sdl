@@ -20,7 +20,7 @@ def manifest(version="1.0.0", ref="v1.0.0", name="sdl"):
         "plugins": [{
             "name": name,
             "version": version,
-            "source": {"source": "git-subdir", "url": "https://example/x.git",
+            "source": {"source": "git-subdir", "url": cr.EXPECTED_SOURCE_URL,
                        "path": "plugins/sdl", "ref": ref},
         }],
     }
@@ -67,6 +67,19 @@ class Changelog(unittest.TestCase):
 
 
 class ManifestCheck(unittest.TestCase):
+    def assert_source_drift_for_both_catalogs(self, field, value):
+        for require_declared_version in (True, False):
+            with self.subTest(field=field, schema=(
+                    "claude" if require_declared_version else "codex")):
+                doc = manifest()
+                if not require_declared_version:
+                    del doc["plugins"][0]["version"]
+                doc["plugins"][0]["source"][field] = value
+                errors = cr.check_manifest(
+                    doc, "sdl", "1.0.0",
+                    require_declared_version=require_declared_version)
+                self.assertTrue(any(f"source.{field}" in error for error in errors))
+
     def test_agreement(self):
         self.assertEqual(cr.check_manifest(manifest(), "sdl", "1.0.0"), [])
 
@@ -82,6 +95,16 @@ class ManifestCheck(unittest.TestCase):
         errs = cr.check_manifest(manifest(ref="v1"), "sdl", "1.0.0")
         self.assertTrue(any("expected 'v1.0.0'" in e for e in errs))
 
+    def test_source_kind_drift_is_rejected_for_both_catalogs(self):
+        self.assert_source_drift_for_both_catalogs("source", "git")
+
+    def test_source_url_drift_is_rejected_for_both_catalogs(self):
+        self.assert_source_drift_for_both_catalogs(
+            "url", "https://github.com/attacker/sdl.git")
+
+    def test_source_path_drift_is_rejected_for_both_catalogs(self):
+        self.assert_source_drift_for_both_catalogs("path", "plugins/other")
+
     def test_unknown_plugin(self):
         errs = cr.check_manifest(manifest(name="other"), "sdl", "1.0.0")
         self.assertEqual(len(errs), 1)
@@ -90,6 +113,7 @@ class ManifestCheck(unittest.TestCase):
     def test_codex_manifest_does_not_need_a_duplicate_version(self):
         doc = manifest()
         del doc["plugins"][0]["version"]
+        doc["plugins"][0]["source"]["path"] = "./plugins/sdl"
         self.assertEqual(
             cr.check_manifest(doc, "sdl", "1.0.0", require_declared_version=False), [])
 

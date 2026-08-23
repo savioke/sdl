@@ -24,9 +24,10 @@ Codex CLI is available. Claude Code and Codex use the same skills, helper
 scripts, templates, version, and immutable release tag.
 
 Release checks and `release.sh` now keep both plugin manifests and both
-marketplace catalogs in lockstep. The Claude-specific background/subagent hints
-on `sdl-dep-update` remain in place; hosts that do not implement them run the
-same skill inline.
+marketplace catalogs in lockstep, including validating the source kind,
+repository URL, plugin subdirectory, and tag. The Claude-specific
+background/subagent hints on `sdl-dep-update` remain in place; hosts that do not
+implement them run the same skill inline.
 
 ## 2.0.0 — 2026-08-06
 
