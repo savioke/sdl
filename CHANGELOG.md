@@ -11,8 +11,22 @@ Entries below 2.0.0 describe the `v1` line and refer to `@v1` as it was current
 at the time. They are left as written: a changelog is a record of what shipped,
 not a description of the present. `v1` is end-of-life — see 2.0.0.
 
-Versions are the plugin's (`plugins/sdl/.claude-plugin/plugin.json`); each is
-tagged `vX.Y.Z` and, for the current major, aliased by `vX`.
+Versions are shared by the Claude and Codex plugin manifests under
+`plugins/sdl/`; each is tagged `vX.Y.Z` and, for the current major, aliased by
+`vX`.
+
+## 2.1.0 — 2026-08-22
+
+**Not breaking.** Add first-class Codex distribution for the existing SDL
+skills. The plugin now includes a Codex manifest, the Relay marketplace exposes
+a Codex catalog, and the installer registers and installs `sdl@relay` when the
+Codex CLI is available. Claude Code and Codex use the same skills, helper
+scripts, templates, version, and immutable release tag.
+
+Release checks and `release.sh` now keep both plugin manifests and both
+marketplace catalogs in lockstep. The Claude-specific background/subagent hints
+on `sdl-dep-update` remain in place; hosts that do not implement them run the
+same skill inline.
 
 ## 2.0.0 — 2026-08-06
 

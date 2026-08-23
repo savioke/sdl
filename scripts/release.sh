@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Release this repo. One command, no arguments, same every time.
 #
-# Reads the version from plugins/sdl/.claude-plugin/plugin.json (bumped in the
-# change PR, not here), then:
+# Reads the shared version from the Claude and Codex plugin manifests (bumped
+# in the change PR, not here), then:
 #   1. verifies main is clean, pushed, and green, and that the marketplace
-#      manifest is present and safe to edit
+#      manifests are present and safe to edit
 #   2. creates the immutable annotated tag vX.Y.Z (signed when a key is set up)
 #   3. force-moves the vX alias that consumer CI pins
-#   4. points the marketplace manifest at that exact tag
+#   4. points both marketplace manifests at that exact tag
 #
 # Immutable tags are never rewritten: if vX.Y.Z already exists the release is
 # refused. Only the alias moves. See docs/releasing.md.
@@ -22,9 +22,14 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MARKETPLACE_REPO="${SDL_MARKETPLACE_REPO:-savioke/relay-plugin-marketplace}"
 PLUGIN_NAME="sdl"
-PLUGIN_JSON="$REPO_ROOT/plugins/sdl/.claude-plugin/plugin.json"
+CLAUDE_PLUGIN_JSON="$REPO_ROOT/plugins/sdl/.claude-plugin/plugin.json"
+CODEX_PLUGIN_JSON="$REPO_ROOT/plugins/sdl/.codex-plugin/plugin.json"
 CHANGELOG="$REPO_ROOT/CHANGELOG.md"
-MANIFEST_PATH=".claude-plugin/marketplace.json"
+MANIFEST_PATHS=(
+  ".claude-plugin/marketplace.json"
+  ".agents/plugins/marketplace.json"
+)
+MANIFEST_REQUIRES_VERSION=("true" "false")
 
 log()  { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m!!\033[0m %s\n' "$*" >&2; }
@@ -53,9 +58,12 @@ git fetch --quiet --tags origin
 
 # --- 2. Version, tag names, changelog --------------------------------------
 
-version="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("version",""))' "$PLUGIN_JSON")"
+version="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("version",""))' "$CLAUDE_PLUGIN_JSON")"
 [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || \
   die "plugin.json version '$version' is not X.Y.Z. Fix it in a PR, not here."
+codex_version="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("version",""))' "$CODEX_PLUGIN_JSON")"
+[[ "$codex_version" == "$version" ]] || \
+  die "plugin manifest versions disagree: Claude '$version', Codex '$codex_version'. Fix them in a PR."
 tag="v$version"
 alias_tag="v${version%%.*}"
 
@@ -89,9 +97,10 @@ fi
 # manifest_py runs the identical parse and validation in both modes, so a
 # manifest that passes 'check' here cannot fail 'write' later for shape reasons.
 manifest_py() {
-  python3 - "$1" "$2" "$PLUGIN_NAME" "$version" "$tag" <<'PY'
+  python3 - "$1" "$2" "$PLUGIN_NAME" "$version" "$tag" "$3" <<'PY'
 import json, sys
-path, mode, plugin, version, tag = sys.argv[1:6]
+path, mode, plugin, version, tag, require_version = sys.argv[1:7]
+require_version = require_version == "true"
 
 
 def die(msg):
@@ -128,10 +137,14 @@ if not isinstance(source, dict):
         f"object — fix the manifest by hand, then re-run")
 
 if mode == "check":
-    print(f"{entry.get('version')!r} / {source.get('ref')!r}")
+    if require_version:
+        print(f"{entry.get('version')!r} / {source.get('ref')!r}")
+    else:
+        print(f"{source.get('ref')!r}")
     sys.exit(0)
 
-entry["version"] = version
+if require_version:
+    entry["version"] = version
 source["ref"] = tag
 with open(path, "w", encoding="utf-8") as fh:
     json.dump(manifest, fh, indent=2)
@@ -142,7 +155,12 @@ PY
 log "Reading $MARKETPLACE_REPO"
 tmpdir="$(mktemp -d)"
 gh repo clone "$MARKETPLACE_REPO" "$tmpdir" -- --quiet --depth 1
-manifest_now="$(manifest_py "$tmpdir/$MANIFEST_PATH" check)" || exit 1
+manifest_now=""
+for i in "${!MANIFEST_PATHS[@]}"; do
+  path="${MANIFEST_PATHS[$i]}"
+  current="$(manifest_py "$tmpdir/$path" check "${MANIFEST_REQUIRES_VERSION[$i]}")" || exit 1
+  manifest_now+=$'\n'"                    $path: $current"
+done
 
 # --- 4. CI must be green ----------------------------------------------------
 
@@ -176,8 +194,8 @@ Release $tag from ${sha:0:9} ($slug)
   create tag        $tag              (immutable, annotated)
   move alias        $alias_tag  -> ${sha:0:9}   (consumer CI pins this)
   marketplace       $MARKETPLACE_REPO
-                    now $manifest_now
-                    -> '$version' / '$tag'
+                    now$manifest_now
+                    -> all source refs '$tag'
 
 Changelog:
 $(printf '%s\n' "$notes" | sed 's/^/  /')
@@ -214,18 +232,21 @@ git push --quiet --force origin "refs/tags/$alias_tag"
 # now are transient (the remote changed under us, or the disk did) — and the
 # message says which, because the tags are already out and cannot be recut.
 log "Updating $MARKETPLACE_REPO"
-manifest_py "$tmpdir/$MANIFEST_PATH" write || die \
-  "$tag and $alias_tag are pushed, but the manifest edit failed. Fix
-   $MARKETPLACE_REPO/$MANIFEST_PATH by hand: set the $PLUGIN_NAME entry to
-   version '$version' and source.ref '$tag'. Do not re-run this script — the
-   tags are correct and $tag is immutable."
+for i in "${!MANIFEST_PATHS[@]}"; do
+  path="${MANIFEST_PATHS[$i]}"
+  manifest_py "$tmpdir/$path" write "${MANIFEST_REQUIRES_VERSION[$i]}" || die \
+    "$tag and $alias_tag are pushed, but the manifest edit failed. Fix
+     $MARKETPLACE_REPO/$path by hand: set the $PLUGIN_NAME source.ref to
+     '$tag' and, when present, version to '$version'. Do not re-run this script
+     — the tags are correct and $tag is immutable."
+done
 
 if [[ -z "$(git -C "$tmpdir" status --porcelain)" ]]; then
-  log "Manifest already at $version / $tag — nothing to commit"
+  log "Marketplace catalogs already at $version / $tag — nothing to commit"
 else
-  git -C "$tmpdir" commit --quiet -am "$PLUGIN_NAME $version (source.ref $tag)"
+  git -C "$tmpdir" commit --quiet -am "$PLUGIN_NAME $version (Claude/Codex source.ref $tag)"
   git -C "$tmpdir" push --quiet
-  log "Manifest updated"
+  log "Marketplace catalogs updated"
 fi
 
 # --- 8. Verify --------------------------------------------------------------
@@ -240,6 +261,7 @@ Released $tag.
 
   Consumers on @$alias_tag pick it up on their next CI run.
   Claude Code developers: /plugin marketplace update relay, then reload.
+  Codex developers: codex plugin marketplace upgrade relay, then start a new session.
   Copilot / clone-based developers: cd ~/.sdl-governance && git pull && scripts/install.sh
 
 EOF

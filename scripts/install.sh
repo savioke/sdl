@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # One-shot dev setup for SDL governance.
-# Clones (or updates) the canonical repo, registers the Relay plugin
-# marketplace and installs the sdl plugin, and symlinks skills into Copilot's
-# skills dir. No global git hook config — hooks are opt-in per repo via
-# sync-to-repo.sh.
+# Clones (or updates) the canonical repo, registers the Relay plugin marketplace
+# and installs the sdl plugin in Claude Code and Codex when available, and
+# symlinks skills into Copilot's skills dir. No global git hook config — hooks
+# are opt-in per repo via sync-to-repo.sh.
 
 set -euo pipefail
 
@@ -64,12 +64,24 @@ else
   warn "claude CLI not found. Skipping plugin install. Install Claude Code and re-run."
 fi
 
+if command -v codex >/dev/null 2>&1; then
+  log "Registering Relay plugin marketplace in Codex"
+  codex plugin marketplace add "$MARKETPLACE_URL" || \
+    warn "Codex marketplace registration failed (may already be registered)."
+  log "Installing sdl plugin in Codex"
+  codex plugin add sdl@relay || \
+    warn "Codex plugin install failed; run 'codex plugin add sdl@relay' manually."
+else
+  warn "codex CLI not found. Skipping Codex plugin install. Install Codex and re-run."
+fi
+
 cat <<EOF
 
 Done.
 
   Install dir:      $INSTALL_DIR
   Claude plugin:    sdl@relay (managed via 'claude plugin')
+  Codex plugin:     sdl@relay (managed via 'codex plugin')
   Copilot skills:   $COPILOT_SKILLS_DIR/$LINK_NAME
 
 To update later:
@@ -77,6 +89,8 @@ To update later:
   # Copilot picks up the new skills immediately (they are symlinked).
   # Claude Code fetches the plugin from GitHub independently of this clone:
   #   /plugin marketplace update relay   (then reload when prompted)
+  # Codex does the same:
+  #   codex plugin marketplace upgrade relay   (then start a new session)
 
 To enable SDL on a project repo:
   $INSTALL_DIR/scripts/sync-to-repo.sh /path/to/repo

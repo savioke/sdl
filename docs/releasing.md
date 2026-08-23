@@ -7,7 +7,7 @@ How a change in this repo reaches the people who depend on it.
 Same every time, whether the change is a typo in a skill or a new validator check.
 
 1. **Branch**, make the change with its SDL cycle as normal.
-2. **In the same PR**, bump `version` in `plugins/sdl/.claude-plugin/plugin.json` and add a matching `## X.Y.Z` entry to `CHANGELOG.md`. Which digit to bump: see the contract below.
+2. **In the same PR**, bump `version` to the same value in `plugins/sdl/.claude-plugin/plugin.json` and `plugins/sdl/.codex-plugin/plugin.json`, then add a matching `## X.Y.Z` entry to `CHANGELOG.md`. Which digit to bump: see the contract below.
 3. **Open the PR, merge it.**
 4. **Back on `main`, pulled:** run `scripts/release.sh`. No arguments.
 
@@ -16,19 +16,26 @@ git checkout main && git pull
 scripts/release.sh
 ```
 
-That's the whole thing. The script tags the release, moves the pointer consumers follow, and updates the marketplace — refusing if anything about the state is wrong.
+That's the whole thing. The script tags the release, moves the pointer consumers follow, and updates the Claude Code and Codex marketplace catalogs — refusing if anything about the state is wrong.
 
 If the PR touches nothing under `plugins/sdl/` or `.github/workflows/sdl-validate.yml`, skip steps 2 and 4 — nothing shipped, so there is nothing to release. CI tells you which case you are in.
 
 **Wait for CI before step 4.** The release refuses while checks on the merge commit are still running (`check 'x' is still in_progress`). Give it a minute and re-run.
 
+**One-time Codex bootstrap for 2.1.0:** merge the `relay-plugin-marketplace`
+`codex-support` branch before merging and releasing this repo's `codex-support`
+branch. That marketplace change adds the Codex catalog but leaves both catalogs
+pinned at the already-released `v2.0.0`, so Claude Code is not moved early.
+Codex installation becomes functional when `release.sh` creates `v2.1.0` and
+advances both catalogs together.
+
 ## What the script does
 
-1. Refuses unless: you are on `main`, the tree is clean, `main` matches `origin/main`, the version is `X.Y.Z`, `CHANGELOG.md` has an entry for it, that version has never been tagged, the marketplace manifest is readable and has exactly one editable `sdl` entry, and every check on the commit is green.
-2. Shows you the plan — including what the manifest says now — and asks once.
+1. Refuses unless: you are on `main`, the tree is clean, `main` matches `origin/main`, both plugin manifests declare the same `X.Y.Z`, `CHANGELOG.md` has an entry for it, that version has never been tagged, both marketplace catalogs are readable and have exactly one editable `sdl` entry, and every check on the commit is green.
+2. Shows you the plan — including what both catalogs say now — and asks once.
 3. Creates the annotated, signed tag `vX.Y.Z`, using your changelog entry as the message.
 4. Force-moves the `vX` alias to the same commit.
-5. Points the marketplace manifest at `vX.Y.Z`.
+5. Points both marketplace catalogs at `vX.Y.Z` and mirrors the version into the Claude catalog, whose schema carries it explicitly.
 6. Re-verifies the result locally.
 
 Every refusal in step 1 happens before anything is pushed, including the manifest check — the manifest is read and validated up front even though it is written last. Once `vX.Y.Z` exists it cannot be recut, so a problem discovered after the tags were pushed would leave you with no way to re-run.
@@ -56,22 +63,24 @@ Two channels deliver this repo, with opposite pinning economics:
 | Channel | Who consumes it | What it pins | Why |
 |---------|-----------------|--------------|-----|
 | CI gate | Every governed repo's `.github/workflows/sdl.yml` | the moving alias `@v2` | There are N of these, owned by other teams. Asking them to edit a pin per release does not scale, so the alias moves under them. |
-| Claude Code plugin | One manifest in `savioke/relay-plugin-marketplace` | the immutable tag `v2.0.0` | There is exactly one pin and it is edited every release anyway, so pinning exactly is free — and it makes a version identify one specific tree. |
+| Claude Code and Codex plugin | Two host-specific catalogs in `savioke/relay-plugin-marketplace` | the same immutable tag, for example `v2.1.0` | There are only two centrally maintained pins and the release script edits both, so pinning exactly is free — and it makes a version identify one specific tree. |
 
-*Pin exactly where there is one pin to maintain; use a moving alias where there are many.* The release script sets both from the same commit so they cannot diverge.
+*Pin exactly where pins are centrally maintained; use a moving alias where there
+are many consumers.* The release script sets both from the same commit so they
+cannot diverge.
 
-The plugin cache is keyed by version (`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/`), so **an install stays on its cached copy until the manifest version changes**. Shipping plugin content without bumping the version delivers it to nobody. That is why step 2 is not optional bookkeeping.
+Plugin installs are cached, so **an install stays on its cached copy until its marketplace and plugin version advance**. Shipping plugin content without bumping the shared version delivers it to nobody. That is why step 2 is not optional bookkeeping.
 
 ## What CI checks
 
 - **On a PR** — if the diff touches shipped content, the version must have increased against the base branch and have a changelog entry. This is what enforces step 2.
-- **Daily (and on demand)** — the declared version has an immutable tag, the `vX` alias points at the same commit, no shipped file has changed since that tag, and the marketplace manifest names that exact version and tag. A manifest that cannot be fetched warns rather than fails; an outage is not drift.
+- **Daily (and on demand)** — the declared version has an immutable tag, the `vX` alias points at the same commit, no shipped file has changed since that tag, and both marketplace catalogs pin that exact tag (with the Claude catalog also naming the version). A catalog that cannot be fetched warns rather than fails; an outage is not drift.
 
 Released-mode does not run on push to `main`, deliberately: between a merge and its release, every one of those conditions is transient, and failing there would block the release the script is waiting to make. The cost is that "merged but never released" takes up to a day to surface rather than being instant. Releasing right after the merge is what actually prevents it.
 
 The daily run also catches what no push can: a manifest edited directly in the marketplace repo, and an action retagged upstream after we pinned it (`check_pins.py`). GitHub disables scheduled workflows in repos with no activity for 60 days; if this repo goes that quiet, re-enable it from the Actions tab.
 
-**CI does not release.** It holds no credential that can write a tag or the marketplace manifest, and it should not: a CI job that can rewrite the distribution channel turns any compromise of this repo's workflows into arbitrary code on every developer's machine and in every consumer's CI. Detection lives in CI; the action stays with the maintainer. See cycle `2026-08-03-release-process`, T3.
+**CI does not release.** It holds no credential that can write a tag or the marketplace catalogs, and it should not: a CI job that can rewrite the distribution channel turns any compromise of this repo's workflows into arbitrary code on every developer's machine and in every consumer's CI. Detection lives in CI; the action stays with the maintainer. See cycle `2026-08-03-release-process`, T3.
 
 ## Escape hatches
 
@@ -110,7 +119,7 @@ That is also the fix when a release breaks someone: pin the previous exact tag t
 ## If a release goes wrong
 
 1. **Roll the alias back.** `git tag -f v2 v2.0.0 && git push -f origin v2` — consumers recover on their next run. The bad tag stays; it is evidence.
-2. **Roll the manifest back** to the previous version and `source.ref` if developers are affected, then tell them to run `/plugin marketplace update relay`.
+2. **Roll both marketplace catalogs back** to the previous `source.ref` (and the Claude catalog's previous version) if developers are affected. Tell Claude Code users to run `/plugin marketplace update relay` and Codex users to run `codex plugin marketplace upgrade relay`, then restart their session.
 3. **Fix forward** in a normal PR with a version bump, noting both the break and the fix in `CHANGELOG.md`.
 
 Rolling the alias back is a distribution change, not a code change, so it needs no cycle of its own — the fix does.
