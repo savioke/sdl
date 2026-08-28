@@ -16,7 +16,8 @@ Two modes:
         change PR".
 
     check_release.py --mode released
-        Ran on main. The declared version must have an immutable tag, the `vX`
+        Ran on demand (workflow_dispatch, or locally) and by release.sh after it
+        tags. The declared version must have an immutable tag, the `vX`
         alias must point at the same commit, no shipped content may have
         changed since that tag, and both marketplace manifests must pin exactly
         that tag (and the Claude catalog must name the version).
@@ -102,7 +103,7 @@ def check_manifest(manifest: object, plugin: str, version: str,
 
     The manifest comes from another repo over the network, so nothing about its
     shape is guaranteed. Type-check before every access: a manifest we cannot
-    read is drift to report, not a traceback out of the daily job.
+    read is drift to report, not a traceback out of the drift check.
     """
     if not isinstance(manifest, dict) or not isinstance(manifest.get("plugins"), list):
         return ["marketplace manifest is not an object with a `plugins` array"]

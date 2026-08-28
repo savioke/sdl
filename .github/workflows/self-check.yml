@@ -3,12 +3,14 @@ on:
   pull_request:
   push:
     branches: [main]
-  # Daily: catches drift no push can catch — an action retagged upstream after
-  # we pinned it, and a marketplace manifest edited in its own repo. GitHub
-  # disables schedules after 60 days of repo inactivity; re-enable from the
-  # Actions tab if this repo ever goes that quiet.
-  schedule:
-    - cron: '17 6 * * *'
+  # No schedule. A cron run attaches its check-runs to whatever commit main is
+  # sitting on, and released-mode is red by design between a merge and the
+  # release that follows it — so a daily run left main permanently red and
+  # deadlocked release.sh, which refuses to release a commit whose checks are
+  # not green. The drift it watched for is covered elsewhere: `pins` runs on
+  # every push and PR, and the marketplace manifest has exactly one writer
+  # (release.sh, which verifies its own work at step 8). Run this by hand when
+  # you want the network half checked.
   workflow_dispatch:
 
 jobs:
@@ -57,14 +59,12 @@ jobs:
         run: |
           git fetch --quiet origin "$BASE_REF"
           python scripts/check_release.py --mode pr --base "origin/$BASE_REF"
-      # Released-mode deliberately does NOT run on push to main. Between a
-      # merge and the release that follows it, every released-mode failure is
-      # transient by design (no tag yet, manifest not yet bumped) — and since
-      # release.sh refuses to release a commit whose checks are red, failing
-      # here would deadlock releases outright. On the daily run, a release
-      # still pending is a real signal.
+      # Released-mode runs on manual dispatch only. Between a merge and the
+      # release that follows it, every released-mode failure is transient by
+      # design (no tag yet, manifest not yet bumped), so running it on any
+      # automatic trigger reports a pending release as a broken main.
       - name: Released state is consistent
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch'
         run: python scripts/check_release.py --mode released
 
   pins:
