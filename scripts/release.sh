@@ -184,19 +184,41 @@ if [[ "${SDL_RELEASE_SKIP_CI:-}" == "1" ]]; then
   warn "SDL_RELEASE_SKIP_CI=1 — releasing a commit whose checks were not verified."
 else
   log "Checking CI status for ${sha:0:9}"
-  runs="$(gh api "repos/$slug/commits/$sha/check-runs" \
-            -q '.check_runs[] | "\(.status):\(.conclusion // "pending"):\(.name)"' 2>/dev/null || true)"
+  # Only checks the code itself triggered can gate a release. A scheduled or
+  # bot-triggered run attaches its check-runs to whatever commit main happens
+  # to be sitting on, so a drift monitor that goes red *because* a release is
+  # pending would otherwise refuse the very release that clears it. Runs we
+  # cannot attribute to a workflow at all (third-party status apps) still gate.
+  ignored_suites="$(gh api "repos/$slug/actions/runs?head_sha=$sha&per_page=100" \
+        -q '.workflow_runs[]
+            | select(.event != "push" and .event != "pull_request")
+            | .check_suite_id' 2>/dev/null || true)"
+  # --paginate: a commit that main has rested on for a while accumulates more
+  # check-runs than one page holds, and a silently truncated page is a gate
+  # that passes by not looking.
+  runs="$(gh api --paginate "repos/$slug/commits/$sha/check-runs?per_page=100" \
+            -q '.check_runs[]
+                | "\(.check_suite.id):\(.status):\(.conclusion // "pending"):\(.name)"' \
+            2>/dev/null || true)"
   [[ -n "$runs" ]] || die "no checks found for ${sha:0:9}. Wait for CI, or set SDL_RELEASE_SKIP_CI=1."
+  gating=0
   while IFS= read -r run; do
     [[ -n "$run" ]] || continue
-    status="${run%%:*}"; rest="${run#*:}"; conclusion="${rest%%:*}"; name="${rest#*:}"
+    suite="${run%%:*}"; rest="${run#*:}"
+    status="${rest%%:*}"; rest="${rest#*:}"
+    conclusion="${rest%%:*}"; name="${rest#*:}"
+    if [[ -n "$ignored_suites" ]] && grep -qxF "$suite" <<< "$ignored_suites"; then
+      continue
+    fi
+    gating=$((gating + 1))
     [[ "$status" == "completed" ]] || die "check '$name' is still $status. Wait for CI to finish."
     case "$conclusion" in
       success|skipped|neutral) ;;
       *) die "check '$name' concluded '$conclusion'. Fix it, or set SDL_RELEASE_SKIP_CI=1." ;;
     esac
   done <<< "$runs"
-  log "All checks green"
+  (( gating > 0 )) || die "no push-triggered checks found for ${sha:0:9}. Wait for CI, or set SDL_RELEASE_SKIP_CI=1."
+  log "All $gating gating check(s) green"
 fi
 
 # --- 5. Confirm -------------------------------------------------------------
