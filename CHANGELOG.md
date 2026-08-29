@@ -15,6 +15,24 @@ Versions are shared by the Claude and Codex plugin manifests under
 `plugins/sdl/`; each is tagged `vX.Y.Z` and, for the current major, aliased by
 `vX`.
 
+## 2.2.0 — 2026-08-29
+
+**Not breaking.** The gate is unchanged; this release is skills and templates
+only. Removing code now closes the risk that code carried, instead of leaving a
+residual-risk row that no future cycle can ever close. `sdl-review` records a
+deleted feature as one past-tense line under a new "Risks closed by removal"
+section in `04-verification.md`, claims the item in `carry_forward:` so it drops
+off the open list, and drops the row from `baseline.md` for a standing `B` item.
+`sdl-threat-model` gives removed code no stanza, no out-of-scope line, and no
+future-cycle signpost; `sdl-spec` gains a carry-forward answer for "the code it
+applied to was deleted"; `sdl-baseline` skips migrating items whose code is
+already gone.
+
+Functionality that moves to another repo leaves with its risks: the record here
+is the one line naming where it went, and the receiving project's own SDL docs
+own it from there. Prior cycle documents are never amended — the history stays,
+only the current register gets shorter.
+
 ## 2.1.0 — 2026-08-22
 
 **Not breaking.** Add first-class Codex distribution for the existing SDL
