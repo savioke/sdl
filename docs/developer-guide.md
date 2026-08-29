@@ -78,7 +78,7 @@ Note that this is the only step that has to happen *in the repo*. Cloning a repo
 - **Carry-forward works.** If a previous cycle deferred something, `sdl-spec` surfaces it at the start of the next cycle so it doesn't get lost.
 - **Dependency bumps get a lighter path.** Minor/patch bumps (Dependabot or otherwise) don't need a full cycle: the agent runs `sdl-dep-update`, which writes a one-file `dep-update.md` record the validator checks. Major bumps and new dependencies escalate to a normal cycle. Policy: [dependency-updates.md](dependency-updates.md); recipe: [Adding SDL docs to a Dependabot PR](#adding-sdl-docs-to-a-dependabot-pr).
 - **CI is the gate.** There are no local pre-commit hooks. The PR will fail if SDL artifacts are missing or stub. Catch it earlier by asking the agent to run `sdl-review` before pushing.
-- **Don't delete cycle folders, ever.** Even for ripped-out features. Auditors want history.
+- **Don't delete cycle folders.** Even for ripped-out features. Auditors want history.
 - **If you commit without an agent**, no SDL artifacts get written. CI will catch it on the PR. Fix by asking the agent to run `sdl-spec` (if no cycle exists) and `sdl-review` (to populate the rest), then push.
 
 ## Adding SDL docs to a Dependabot PR

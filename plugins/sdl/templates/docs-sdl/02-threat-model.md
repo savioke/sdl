@@ -28,7 +28,9 @@
 ## Threats inherited from prior cycles <!-- SR-2 -->
 
 <!-- Reference threats from related_cycles in .sdl-meta.yml that still apply.
-     Do not re-litigate; link and confirm scope. -->
+     Do not re-litigate; link and confirm scope. A prior threat whose code this
+     cycle deletes is closed here in one past-tense line — no caveat about the
+     code returning, and no notes on a repo the code moved to. -->
 
 ## Out-of-scope threats
 
@@ -39,4 +41,5 @@
 ## Noted for future cycles
 
 <!-- One line each. Concerns not reachable with the code as written but worth a
-     signpost for the next maintainer if the code grows a certain way. No stanzas. -->
+     signpost for the next maintainer if the code grows a certain way. No stanzas.
+     Never a signpost about code that was removed. -->

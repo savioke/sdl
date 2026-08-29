@@ -36,4 +36,6 @@
 
 ## Carried-forward residual risks
 
-<!-- Items from prior cycles' 04-verification.md that this cycle should address. -->
+<!-- Items from prior cycles' 04-verification.md that this cycle should address.
+     An item whose code no longer exists is closed, not carried: one past-tense
+     line saying so is the whole entry. -->

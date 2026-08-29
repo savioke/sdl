@@ -47,6 +47,8 @@
 ## Maintenance
 
 <!-- Update this file when the exposure model changes, a standing risk is closed or
-     added, or a major component is introduced/removed. It is not per-cycle; most
-     PRs leave it untouched. The sdl-review skill will suggest an update when a
+     added, or a major component is introduced/removed. When the code behind a B item
+     is deleted, drop the row — the register describes the repo as it stands now, and
+     the closing cycle's 04-verification.md holds the one line saying it was removed.
+     It is not per-cycle; most PRs leave it untouched. The sdl-review skill will suggest an update when a
      cycle's residual risk looks like a standing condition rather than a one-off. -->

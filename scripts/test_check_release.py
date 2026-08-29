@@ -247,13 +247,20 @@ class GitFixture(unittest.TestCase):
     """Builds a throwaway repo so the git-touching paths are covered for real."""
 
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        # ignore_cleanup_errors: git's background housekeeping can still be
+        # writing inside .git when the fixture tears down, and an rmtree that
+        # loses that race fails the test for a reason that has nothing to do
+        # with what it asserted. gc.auto/maintenance.auto below stop the
+        # housekeeping from starting; this keeps a stray one from failing CI.
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.repo = Path(self.tmp.name)
         self.addCleanup(self.tmp.cleanup)
         self.git("init", "-q", "-b", "main")
         self.git("config", "user.email", "t@example.com")
         self.git("config", "user.name", "T")
         self.git("config", "commit.gpgsign", "false")
+        self.git("config", "gc.auto", "0")
+        self.git("config", "maintenance.auto", "false")
         (self.repo / "plugins/sdl/.claude-plugin").mkdir(parents=True)
         (self.repo / "plugins/sdl/.codex-plugin").mkdir(parents=True)
         self.write_version("1.0.0")

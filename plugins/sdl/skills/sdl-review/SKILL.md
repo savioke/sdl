@@ -101,11 +101,14 @@ That fills Reviewer, Date, and Diff range in `04-verification.md` and prints the
 - Write a `### <Category>` subsection under "Checks performed" **only for categories the diff actually touches** — a verified positive practice, or a finding. Collapse the rest into one line at the end: `Not applicable (no code in these areas): persistence, cryptography, network/transport, authn/authz, frontend, native, CI/supply-chain.` Do not write a `### Category` / `Applies: no` stanza per non-applicable category.
 - Reference any static analysis or SBOM output already present in CI.
 - Populate the Residual risks table with anything you couldn't verify or that should be deferred. Each row needs an ID (R1, R2, …), description, severity, disposition, and a carry-forward target if applicable.
+- **Deleted code is not a risk.** Nothing addresses a risk better than removing the code that carried it. Never open an R-item for code this diff deletes, and never leave a note that it would be a risk again if the code came back. If the removal closes an open item from a prior cycle or the baseline, write one line under "Risks closed by removal" — `R2 (2026-05-01-token-cache): closed by removal of the token cache.` — add that ref to `carry_forward:` so `open_risks.py` stops printing it, and for a `B` item drop the row from `docs/sdl/baseline.md`. That line is the entire ongoing record; the history stays in the old cycle's documents, which you do not amend.
+- **Functionality that moves to another repo takes its risks with it.** Record the removal in the same one line. The receiving project owns its threat model, mitigations, and follow-up — do not describe what that project needs to do, do not open an R-item to track it, and do not carry it forward here.
 - If a residual risk is a **standing condition** (pre-existing, not introduced by this diff — e.g. an unauthenticated endpoint that predates it), reference the baseline register by ID (`inherits baseline:B2`) if present, or suggest adding it to `docs/sdl/baseline.md` via `sdl-baseline`. Keep this cycle's R-items to risks this diff introduces or leaves open.
 
 **`.sdl-meta.yml`:**
 - If a PR exists for this branch (check `gh pr view --json number` or similar), set `pr:` to the number.
 - Update `status:` to `review`.
+- If this diff closed a prior cycle's risk by deleting the code, add that ref to `carry_forward:` — the item is settled, and claiming it here is what takes it off the open list.
 - If you wrote new residual risks, do **not** add them to `carry_forward:` here — `carry_forward` is for items inherited from prior cycles. New residual risks are recorded only in `04-verification.md` and will be carried into a future cycle by `sdl-spec` if and when that cycle starts.
 
 ### 6. Regenerate `docs/sdl/INDEX.md`
@@ -125,7 +128,7 @@ Tell the user:
 - Which categories applied and were verified positive.
 - Which categories applied and had findings (with file:line refs).
 - Any threat IDs missing a corresponding mitigation in code.
-- Any residual risks recorded.
+- Any residual risks recorded, and any prior risks closed by removal.
 - Files modified by this skill.
 
 Be specific. Do not say "I reviewed everything and it looks good" unless every applicable category was verified positive with explicit references.
