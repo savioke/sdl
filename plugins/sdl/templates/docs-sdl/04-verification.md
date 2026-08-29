@@ -39,8 +39,21 @@
 ## Residual risks <!-- DM-1 -->
 
 <!-- Anything not verified or accepted as known risk. Each entry should be
-     specific enough that a future cycle can carry it forward via .sdl-meta.yml. -->
+     specific enough that a future cycle can carry it forward via .sdl-meta.yml.
+     Only risks that live in the code as it stands now. Code this diff deleted
+     has no residual risk, and neither does functionality that moved to another
+     repo — those go in "Risks closed by removal" below and are done. -->
 
 | ID  | Description | Severity | Disposition | Carry-forward target |
 |-----|-------------|----------|-------------|----------------------|
 | R1  |             |          | accept | defer | mitigate-later |  |
+
+## Risks closed by removal
+
+<!-- OPTIONAL — omit the section entirely when this diff removed nothing.
+     One line each, past tense and final:
+       "R2 (2026-05-01-token-cache): closed by removal of the token cache."
+       "B3: closed by removal of the legacy admin endpoint; row dropped from baseline.md."
+     No caveats about what would happen if the code came back, and no notes on
+     what a project the code moved to should do about it. That belongs in that
+     project's own SDL docs, not here. -->

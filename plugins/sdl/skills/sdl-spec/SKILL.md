@@ -81,6 +81,7 @@ It reads every cycle's residual-risk table, keeps the `defer` and `mitigate-late
 - **Yes, addressing it.** Add to `carry_forward:` in `.sdl-meta.yml` and reference in `01-requirements.md` "Carried-forward residual risks".
 - **No, still deferred.** Note that the item remains open in the source cycle; do not add to this cycle's `carry_forward`.
 - **No longer relevant.** Note the disposition change in this cycle's `01-requirements.md` so the auditor trail is intact.
+- **Gone — the code it applied to was deleted.** It is closed, not deferred. Add it to `carry_forward:` (that is what takes it off the open list) and record one past-tense line in `01-requirements.md`: `R2 (2026-05-01-token-cache): closed, the token cache was removed.` Don't restate the old risk, don't add a condition about the code returning, and if the feature moved to another repo, don't write down what that repo has to do — its docs own that now.
 
 Don't invent connections. If there are no obvious related cycles, leave the section empty.
 

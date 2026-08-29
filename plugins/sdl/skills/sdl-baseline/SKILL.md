@@ -53,7 +53,7 @@ Keep it tight. The baseline is a reference, not an audit report. If a section do
 
 ### 4. Migrate standing risks out of existing cycles (if any)
 
-If feature cycles already exist (the baseline is being added to a repo that already ran cycles), scan their `04-verification.md` residual-risk tables for items that are really standing conditions — pre-existing unauthenticated endpoints, platform-level deferrals, etc. Move those into the baseline risk register with `B` IDs, and note in the source cycle that the risk is now tracked in the baseline. Leave genuinely cycle-specific risks where they are.
+If feature cycles already exist (the baseline is being added to a repo that already ran cycles), scan their `04-verification.md` residual-risk tables for items that are really standing conditions — pre-existing unauthenticated endpoints, platform-level deferrals, etc. Move those into the baseline risk register with `B` IDs, and note in the source cycle that the risk is now tracked in the baseline. Leave genuinely cycle-specific risks where they are. Skip any item whose code is already gone — a removed feature has no standing risk to register.
 
 ### 5. Report
 

@@ -16,6 +16,8 @@ Most diffs introduce **zero to two** new threats. A concern earns a full stanza 
 - **Covered by the baseline or a prior cycle** → reference by ID; don't restate.
 - **Forward-looking habit risk** → "Noted for future cycles".
 
+Code the diff **removes** is not a threat in any of those forms. It gets no stanza, no out-of-scope line, and no future-cycle signpost — deleting the code is the strongest mitigation there is. If a prior cycle modelled it, close that threat under step 4 and move on.
+
 The Description / Likelihood / Impact / Mitigation / Mitigation-type / Defense-in-depth structure is for live threats only.
 
 Read `docs/sdl/baseline.md` first (if present) and reference its standing exposure model and risks rather than re-deriving them.
@@ -79,14 +81,14 @@ Read `02-threat-model.md` from each cycle in `related_cycles`. For each prior th
 - Do not renumber it; reference it by `<prior-slug>:T<N>`.
 - Add a short note in the "Threats inherited from prior cycles" section explaining whether the prior mitigation still holds, or whether this cycle changes it.
 
-If a prior threat is now obsolete (the code path it covered is gone), say so explicitly with one line.
+If a prior threat is now obsolete because the code path it covered is gone, close it in one line — `2026-05-01-token-cache:T2 — obsolete, the token cache was removed in this cycle.` Past tense, no conditions attached: no "if the cache is reintroduced" caveat, and if the code moved to another repo, no account of what that repo now has to handle. Its threat model lives there.
 
 ### 5. One-line notes: out of scope and noted for future cycles
 
 Everything you considered but did not write as a live threat goes here, **one line each**.
 
-- **Out-of-scope threats:** concerns owned elsewhere (IAM scope, a platform default, an upstream layer covered by the baseline or a prior cycle) or explicitly deferred/accepted. One line with rationale and owner — the auditor-visible reason a known concern wasn't mitigated here.
-- **Noted for future cycles:** concerns not reachable with the code as written but worth a signpost if it grows a certain way (e.g. "if user-data ever carries a non-allowlisted string, switch to a YAML marshaller").
+- **Out-of-scope threats:** concerns owned elsewhere (IAM scope, a platform default, an upstream layer covered by the baseline or a prior cycle) or explicitly deferred/accepted. One line with rationale and owner — the auditor-visible reason a known concern wasn't mitigated here. This covers concerns that still exist in *this* repo's picture but are someone else's to mitigate — not work that left the repo entirely along with its code.
+- **Noted for future cycles:** concerns not reachable with the code as written but worth a signpost if it grows a certain way (e.g. "if user-data ever carries a non-allowlisted string, switch to a YAML marshaller"). Signposts are for code that exists and could grow, never for code that was deleted.
 
 If a note wants a Mitigation and a Likelihood/Impact, either it's a real threat (promote it to step 3) or keep it to one line.
 
